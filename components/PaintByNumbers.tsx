@@ -11,16 +11,29 @@ import {
 import { CancellationToken, RGB } from "@/lib/pbn/common";
 import { ClusteringColorSpace, Settings } from "@/lib/pbn/settings";
 import {
+  CropRect,
   downloadPDF,
-  downloadPDFStandard,
+  downloadPDFCropped,
   downloadPNG,
   downloadSVG,
+  getPaperAspect,
   PaperFormat,
   PaperOrientation,
   PdfSize,
+  svgToPngDataUrl,
 } from "@/lib/pbn/svgExport";
 import { downloadPalettePng } from "@/lib/pbn/paletteExport";
+import CropModal from "./CropModal";
 import styles from "./PaintByNumbers.module.css";
+
+const PAPER_LABELS: Record<PaperFormat, string> = {
+  a3: "A3",
+  a4: "A4",
+  a5: "A5",
+  letter: "Letter",
+  legal: "Legal",
+  tabloid: "Tabloid",
+};
 
 const EXAMPLE_IMAGES: Record<string, string> = {
   trivial: "https://i.imgur.com/o5CqO57.png",
@@ -142,6 +155,7 @@ export default function PaintByNumbers() {
   const [pdfHeight, setPdfHeight] = useState<number>(29.7);
   const [paperFormat, setPaperFormat] = useState<PaperFormat>("a4");
   const [paperOrientation, setPaperOrientation] = useState<PaperOrientation>("portrait");
+  const [cropModal, setCropModal] = useState<{ src: string; w: number; h: number } | null>(null);
 
   // ui state
   const [inputTab, setInputTab] = useState<"input" | "options">("input");
@@ -510,9 +524,18 @@ export default function PaintByNumbers() {
     if (svg) void downloadPDF(svg as SVGSVGElement, { unit: pdfUnit, width: pdfWidth, height: pdfHeight } as PdfSize);
   };
 
-  const handleDownloadPDFStandard = () => {
+  const handleDownloadPDFStandard = async () => {
     const svg = svgContainerRef.current?.querySelector("svg");
-    if (svg) void downloadPDFStandard(svg as SVGSVGElement, paperFormat, paperOrientation);
+    if (!svg) return;
+    const { dataUrl, width, height } = await svgToPngDataUrl(svg as SVGSVGElement);
+    setCropModal({ src: dataUrl, w: width, h: height });
+  };
+
+  const handleCropConfirm = (crop: CropRect) => {
+    if (cropModal) {
+      void downloadPDFCropped(cropModal.src, crop, paperFormat, paperOrientation);
+    }
+    setCropModal(null);
   };
 
   return (
@@ -973,8 +996,8 @@ export default function PaintByNumbers() {
                   <option value="landscape">Landscape</option>
                 </select>
               </label>
-              <button className={styles.btn} onClick={handleDownloadPDFStandard}>
-                Download PDF (standard size)
+              <button className={styles.btn} onClick={() => void handleDownloadPDFStandard()}>
+                Select area &amp; download PDF
               </button>
             </div>
           </>
@@ -988,6 +1011,18 @@ export default function PaintByNumbers() {
           ))}
         </div>
       </div>
+
+      {cropModal && (
+        <CropModal
+          imageSrc={cropModal.src}
+          imageWidth={cropModal.w}
+          imageHeight={cropModal.h}
+          aspect={getPaperAspect(paperFormat, paperOrientation)}
+          title={`${PAPER_LABELS[paperFormat]} ${paperOrientation}`}
+          onCancel={() => setCropModal(null)}
+          onConfirm={handleCropConfirm}
+        />
+      )}
     </div>
   );
 }

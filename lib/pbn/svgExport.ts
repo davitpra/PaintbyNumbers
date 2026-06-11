@@ -14,7 +14,7 @@ function triggerDownload(href: string, filename: string) {
     document.body.removeChild(link);
 }
 
-function svgToPngDataUrl(svgEl: SVGSVGElement): Promise<{ dataUrl: string; width: number; height: number }> {
+export function svgToPngDataUrl(svgEl: SVGSVGElement): Promise<{ dataUrl: string; width: number; height: number }> {
     const width = parseInt(svgEl.getAttribute("width") || "0", 10) || svgEl.clientWidth;
     const height = parseInt(svgEl.getAttribute("height") || "0", 10) || svgEl.clientHeight;
 
@@ -81,28 +81,67 @@ export async function downloadPDF(
 export type PaperFormat = "a3" | "a4" | "a5" | "letter" | "legal" | "tabloid";
 export type PaperOrientation = "portrait" | "landscape";
 
-export async function downloadPDFStandard(
-    svgEl: SVGSVGElement,
+/** Paper sizes in millimetres (portrait: width x height). */
+const PAPER_DIMS: Record<PaperFormat, [number, number]> = {
+    a3: [297, 420],
+    a4: [210, 297],
+    a5: [148, 210],
+    letter: [215.9, 279.4],
+    legal: [215.9, 355.6],
+    tabloid: [279.4, 431.8],
+};
+
+/** Aspect ratio (width / height) of the chosen paper, accounting for orientation. */
+export function getPaperAspect(format: PaperFormat, orientation: PaperOrientation): number {
+    const [w, h] = PAPER_DIMS[format];
+    const [pw, ph] = orientation === "landscape" ? [h, w] : [w, h];
+    return pw / ph;
+}
+
+export interface CropRect {
+    /** Coordinates and size in source-image pixels. */
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = src;
+    });
+}
+
+/**
+ * Renders the selected crop of an already-rasterized PBN (PNG data URL) onto a
+ * standard-sized page, filling it completely. The crop aspect ratio is expected
+ * to match the page aspect ratio (see getPaperAspect), so the image is not
+ * distorted nor letterboxed.
+ */
+export async function downloadPDFCropped(
+    pngDataUrl: string,
+    crop: CropRect,
     format: PaperFormat,
     orientation: PaperOrientation,
     filename: string = "paintbynumbers.pdf",
 ): Promise<void> {
-    const { dataUrl, width: imgW, height: imgH } = await svgToPngDataUrl(svgEl);
-    const doc = new jsPDF({ orientation, unit: "mm", format });
+    const img = await loadImage(pngDataUrl);
 
-    // Fit the PBN into the page (with a small margin) keeping the aspect ratio,
-    // then center it on the page.
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(crop.w));
+    canvas.height = Math.max(1, Math.round(crop.h));
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, crop.x, crop.y, crop.w, crop.h, 0, 0, canvas.width, canvas.height);
+    const croppedUrl = canvas.toDataURL("image/png");
+
+    const doc = new jsPDF({ orientation, unit: "mm", format });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
-    const margin = 10; // mm
-    const availW = pageW - margin * 2;
-    const availH = pageH - margin * 2;
-    const scale = Math.min(availW / imgW, availH / imgH);
-    const drawW = imgW * scale;
-    const drawH = imgH * scale;
-    const x = (pageW - drawW) / 2;
-    const y = (pageH - drawH) / 2;
-
-    doc.addImage(dataUrl, "PNG", x, y, drawW, drawH);
+    doc.addImage(croppedUrl, "PNG", 0, 0, pageW, pageH);
     doc.save(filename);
 }

@@ -228,3 +228,139 @@
   border-radius: 4px;
   min-height: 80px;
 }
+
+/* ---- Crop modal ---- */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--surface, #fff);
+  color: var(--text, #222);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  max-width: min(900px, 95vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.modalClose {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0 4px;
+}
+
+.modalClose:hover {
+  color: var(--text);
+}
+
+.modalHint {
+  margin: 0;
+  padding: 10px 18px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.cropStage {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cropImageWrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  user-select: none;
+  touch-action: none;
+}
+
+.cropImage {
+  display: block;
+  max-width: 100%;
+  max-height: 64vh;
+  width: auto;
+  height: auto;
+}
+
+.cropBox {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--primary, #2196f3);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  cursor: move;
+  touch-action: none;
+}
+
+.cropHandle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border: 2px solid var(--primary, #2196f3);
+  border-radius: 50%;
+  touch-action: none;
+}
+
+.cropHandleNw {
+  top: -8px;
+  left: -8px;
+  cursor: nwse-resize;
+}
+
+.cropHandleNe {
+  top: -8px;
+  right: -8px;
+  cursor: nesw-resize;
+}
+
+.cropHandleSw {
+  bottom: -8px;
+  left: -8px;
+  cursor: nesw-resize;
+}
+
+.cropHandleSe {
+  bottom: -8px;
+  right: -8px;
+  cursor: nwse-resize;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.modalActions .btn,
+.modalActions .btnCancel {
+  margin: 0;
+}
