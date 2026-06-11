@@ -1,97 +1,11 @@
 # Paint by numbers generator
 Generate paint by number images (vectorized with SVG) from any input image.
 
-*** This project was a proof of concept for fun back in the day, it is not being actively maintained but feel free to fork and make your own changes.  ***
+*** This project was a proof of concept for fun back in the day. The web app has since been migrated to Next.js + React; feel free to fork and make your own changes. ***
 
 ## Demo
 
 Try it out [here](https://drake7707.github.io/paintbynumbersgenerator/index.html)
-
-### CLI Version
-
-The CLI version is a self contained node application that does the conversion from arguments, for example:
-```
-paint-by-numbers-generator-win.exe -i input.png -o output.svg
-```
-You can change the settings in settings.json or optionally specify a specific settings.json with the `-c path_to_settings.json` argument.
-
-The settings contain mostly the same settings in the web version:
- - randomSeed: the random seed to choose the initial starting points of the k-means clustering algorithm. This ensures that the same results are generated each time.
- - kMeansNrOfClusters: the number of colors to quantize the image to
- - kMeansMinDeltaDifference: the threshold delta distance of the k-means clustering to reach before stopping. Having a bigger value will speed up the clustering but may yield suboptimal clusters. Default 1
- - kMeansClusteringColorSpace: the color space to apply clustering in
- - kMeansColorRestrictions: Specify which colors should be used. An array of rgb values (as number array) or names of colors (reference to color aliases). If no colors are specified no restrictions are applied. Useful if you only have a few colors of paint on hand.
- - colorAliases: map of key/values where the keys are the color names and the values are the rgb colors (as number array). You can use the color names in the color restrictions above. The names are also mentioned in the output json that tells you how much % of the area is of that specific color.
-       ```
-       "colorAliases": {
-              "A1": [            0,            0,            0        ],
-              "A2": [            255,            0,            0        ],
-              "A3": [            0,            255,            0        ],
-          }
-        ```
- - removeFacetsSmallerThanNrOfPoints: removes any facets that are smaller than the given amount of pixels. Lowering the value will create more detailed results but might be much harder to actually paint due to their size.
- - removeFacetsFromLargeToSmall (true/false): largest to smallest will prevent boundaries from warping the shapes because the smaller facets act as border anchorpoints but can be considerably slower
- - maximumNumberOfFacets: if there are more facets than the given maximum number, keep removing the smallest facets until the limit is reached
- 
- - nrOfTimesToHalveBorderSegments: reducing the amount of points in a border segment (using haar wavelet reduction) will smooth out the quadratic curve more but at a loss of detail. A segment (shared border with a facet) will always retain its start and end point.
- 
- - narrowPixelStripCleanupRuns: narrow pixel cleanup removes strips of single pixel rows, which would make some facets have some borders segments that are way too narrow to be useful. The small facet removal can introduce new narrow pixel strips, so this is repeated in a few iterative runs.
- 
- - resizeImageIfTooLarge (true/false): if true and the input image is larger than the given dimensions then it will be resized to fit but will maintain its ratio.
- - resizeImageWidth: width restriction
- - resizeImageHeight: height restriction
-
-There are also output profiles that you can define to output the result to svg, png, jpg with specific settings, for example:
-```
-  "outputProfiles": [
-        {
-            "name": "full",
-            "svgShowLabels": true,
-            "svgFillFacets": true,
-            "svgShowBorders": true,
-            "svgSizeMultiplier": 3,
-            "svgFontSize": 50,
-            "svgFontColor": "#333",
-            "filetype": "png"
-        },
-        {
-            "name": "bordersLabels",
-            "svgShowLabels": true,
-            "svgFillFacets": false,
-            "svgShowBorders": true,
-            "svgSizeMultiplier": 3,
-            "svgFontSize": 50,
-            "svgFontColor": "#333",
-            "filetype": "svg"
-        },
-        {
-            "name": "jpgtest",
-            "svgShowLabels": false,
-            "svgFillFacets": true,
-            "svgShowBorders": false,
-            "svgSizeMultiplier": 3,
-            "svgFontSize": 50,
-            "svgFontColor": "#333",
-            "filetype": "jpg",
-            "filetypeQuality": 80
-        }
-    ]
-```
-This defines 3 output profiles. The "full" profile shows labels, fills the facets and shows the borders with a 3x size multiplier, font size weight of 50, color of #333 and output to a png image. The bordersLabels profile outputs to a svg file without filling facets and jpgtest outputs to a jpg file with jpg quality setting  of 80.
-
-The CLI version also outputs a json file that gives more information about the palette, which colors are used and in what quantity, e.g.:
-```
-  ...
-  {
-    "areaPercentage": 0.20327615489130435,
-    "color": [ 59, 36, 27 ],
-    "frequency": 119689,
-    "index": 0
-  },
-   ...
-```
-
-The CLI version is useful if you want to automate the process into your own scripts.
 
 ## Screenshots
 
@@ -106,13 +20,37 @@ The CLI version is useful if you want to automate the process into your own scri
 
 ![ExampleOutput2](https://i.imgur.com/SxWhOc7.png)
 
-## Running locally
+## Running locally (Next.js)
 
-I used VSCode, which has built in typescript support. To debug it uses a tiny webserver to host the files on localhost. 
+The web app has been migrated to [Next.js](https://nextjs.org/) (App Router + TypeScript). React replaces the old jQuery/Materialize UI, while the image-processing algorithms are reused unchanged under `lib/pbn/`.
 
-To run do `npm install` to restore packages and then `npm start` to start the webserver
+```
+npm install      # restore packages
+npm run dev      # start the dev server on http://localhost:3000
+npm run build    # production build
+npm start        # serve the production build
+```
 
+### Project structure
 
-## Compiling the cli version
+ - `app/` — Next.js App Router (`layout.tsx`, `page.tsx`, `globals.css`)
+ - `components/PaintByNumbers.tsx` — the React UI (input, options, progress, output)
+ - `lib/pbn/` — the framework-agnostic processing pipeline (color reduction, facet building/reduction, border tracing/segmentation, label placement, SVG/PNG export)
 
-Install pkg first if you don't have it yet `npm install pkg -g`. Then in the root folder run `pkg .`. This will generate the output for linux, windows and macos.
+The processing runs entirely client-side in the browser (it relies on `<canvas>`), so the page is a client component.
+
+### Settings
+
+The same options exposed in the original tool are available in the Options tab:
+
+ - **Number of colors** — the number of colors to quantize the image to (k-means clusters).
+ - **Cluster precision** — the threshold delta distance of the k-means clustering to reach before stopping. A bigger value speeds up clustering but may yield suboptimal clusters.
+ - **Random seed** — the seed for choosing the initial centroids, so the same input gives the same result.
+ - **Clustering color space** — RGB, HSL or Lab.
+ - **Restrict clustering colors** — limit the palette to specific `r,g,b` values (one per line, `//` to comment), useful if you only have a few paint colors on hand.
+ - **Narrow pixel cleanup runs** — removes single-pixel-wide strips that produce border segments too narrow to be useful, repeated over a few iterations.
+ - **Remove facets smaller than (pixels)** — drops tiny facets; lower values give more detail but are harder to paint.
+ - **Maximum number of facets** — keeps removing the smallest facets until the limit is reached.
+ - **Small facet removal order** — largest-to-smallest preserves shapes better (smaller facets act as anchors) but is slower.
+ - **Times to halve border segment complexity** — Haar-wavelet reduction smooths the quadratic curves at a loss of detail; start/end points of each segment are always retained.
+ - **Resize image larger than** — resizes oversized input to fit the given dimensions while keeping its ratio.

@@ -1,23 +1,26 @@
 {
   "name": "paint-by-numbers-generator",
-  "version": "1.0.0",
-  "description": "Paint by numbers generator",
-  "bin": "./src-cli/main.js",
+  "version": "2.0.0",
+  "description": "Paint by numbers generator (Next.js)",
+  "private": true,
   "scripts": {
-    "lite": "lite-server --port 10001",
-    "start": "npm run lite"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "author": "drake7707",
-  "devDependencies": {
-    "@types/node": "^12.7.1",
-    "lite-server": "^1.3.1"
-  },
+  "license": "Apache-2.0",
   "dependencies": {
-    "@types/jquery": "^3.3.31",
-    "@types/materialize-css": "^1.0.6",
-    "@types/minimist": "^1.2.0",
-    "canvas": "2.5.0",
-    "minimist": "^1.2.3",
-    "svg2img": "^0.6.1"
+    "jspdf": "^4.2.1",
+    "next": "^15.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.1.1",
+    "@types/react-dom": "^19.1.1",
+    "typescript": "^5.7.2"
   }
 }
