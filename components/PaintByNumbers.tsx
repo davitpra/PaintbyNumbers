@@ -407,6 +407,23 @@ export default function PaintByNumbers() {
     ],
   );
 
+  const computeRecipes = useCallback(async (pal: RGB[]) => {
+    if (pal.length === 0) return;
+    setMixingBusy(true);
+    setMixingProgress(0);
+    try {
+      const { findRecipes } = await import("@/lib/pbn/paintMixing");
+      const result = await findRecipes(pal, undefined, (done, total) =>
+        setMixingProgress(done / total),
+      );
+      setRecipes(result);
+    } finally {
+      setMixingBusy(false);
+    }
+  }, []);
+
+  const handleComputeRecipes = () => void computeRecipes(palette);
+
   const process = useCallback(async () => {
     const canvases = {
       input: inputCanvasRef.current,
@@ -484,6 +501,8 @@ export default function PaintByNumbers() {
       setHasOutput(true);
       await updateOutput(false);
       setOutputTab("output-pane");
+      // auto-compute the mixing recipes guide for the new palette
+      void computeRecipes(processResultRef.current.colorsByIndex);
     } catch (e) {
       const err = e as Error;
       if (err.message === "Cancelled") {
@@ -495,7 +514,13 @@ export default function PaintByNumbers() {
     } finally {
       setIsProcessing(false);
     }
-  }, [buildSettings, log, updateOutput, narrowPixelCleanupRuns]);
+  }, [
+    buildSettings,
+    log,
+    updateOutput,
+    narrowPixelCleanupRuns,
+    computeRecipes,
+  ]);
 
   // re-render the SVG when render options change (after a result exists)
   useEffect(() => {
@@ -527,21 +552,6 @@ export default function PaintByNumbers() {
         processResultRef.current.colorsByIndex,
         recipes ?? undefined,
       );
-    }
-  };
-
-  const handleComputeRecipes = async () => {
-    if (palette.length === 0 || mixingBusy) return;
-    setMixingBusy(true);
-    setMixingProgress(0);
-    try {
-      const { findRecipes } = await import("@/lib/pbn/paintMixing");
-      const result = await findRecipes(palette, undefined, (done, total) =>
-        setMixingProgress(done / total),
-      );
-      setRecipes(result);
-    } finally {
-      setMixingBusy(false);
     }
   };
 
@@ -1016,117 +1026,7 @@ export default function PaintByNumbers() {
             </div>
           ))}
         </div>
-
-        {palette.length > 0 && (
-          <div className={styles.mixPanel}>
-            <div className={styles.mixHeader}>
-              <span>Recetas de mezcla / Mixing recipes</span>
-              <button
-                className={styles.btn}
-                onClick={handleComputeRecipes}
-                disabled={mixingBusy}
-              >
-                {mixingBusy
-                  ? `Calculando… ${Math.round(mixingProgress * 100)}%`
-                  : recipes
-                    ? "Recalcular"
-                    : "Calcular recetas"}
-              </button>
-            </div>
-            <div className={styles.basePaintsSection}>
-              <button
-                type="button"
-                className={styles.basePaintsToggle}
-                onClick={() => setShowBasePaints((v) => !v)}
-                aria-expanded={showBasePaints}
-              >
-                {showBasePaints ? "▼" : "▶"} Pinturas base (
-                {DEFAULT_BASE_PAINTS.length}) / Base paints
-              </button>
-              {showBasePaints && (
-                <div className={styles.basePaintsGrid}>
-                  {DEFAULT_BASE_PAINTS.map((p) => (
-                    <div key={p.id} className={styles.basePaintItem}>
-                      <span
-                        className={styles.basePaintSwatch}
-                        style={{
-                          backgroundColor: `rgb(${p.rgb[0]},${p.rgb[1]},${p.rgb[2]})`,
-                        }}
-                        title={`${p.nameEn} — nº ${p.codigo} (${p.pigmento}) — ${p.rgb[0]},${p.rgb[1]},${p.rgb[2]}`}
-                      />
-                      <span className={styles.basePaintName}>
-                        {p.nameEs}
-                        <span className={styles.basePaintCode}>
-                          nº {p.codigo}
-                        </span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {recipes && (
-              <div className={styles.mixList}>
-                {recipes.map((recipe, i) => {
-                  const c = palette[i];
-                  const m = recipe.mixedRgb;
-                  const recipeText = recipe.entries
-                    .map(
-                      (e) =>
-                        `${e.parts} ${e.parts === 1 ? "parte" : "partes"} ${e.paint.nameEs}`,
-                    )
-                    .join(" + ");
-                  const recipeEn = recipe.entries
-                    .map(
-                      (e) =>
-                        `${e.parts} part${e.parts === 1 ? "" : "s"} ${e.paint.nameEn}`,
-                    )
-                    .join(" + ");
-                  return (
-                    <div key={i} className={styles.mixRow}>
-                      <div
-                        className={styles.mixSwatch}
-                        style={{
-                          backgroundColor: `rgb(${c[0]},${c[1]},${c[2]})`,
-                        }}
-                        title={`Color ${i}: ${c[0]},${c[1]},${c[2]}`}
-                      >
-                        {i}
-                      </div>
-                      <div
-                        className={styles.mixSwatchResult}
-                        style={{
-                          backgroundColor: `rgb(${m[0]},${m[1]},${m[2]})`,
-                        }}
-                        title={`Mezcla: ${m[0]},${m[1]},${m[2]}`}
-                      />
-                      <span className={styles.mixRecipeText} title={recipeEn}>
-                        {recipeText}
-                      </span>
-                      <span
-                        className={`${styles.mixBadge} ${styles[`mix${recipe.quality.charAt(0).toUpperCase() + recipe.quality.slice(1)}`]}`}
-                      >
-                        ΔE {recipe.deltaE.toFixed(1)}
-                        {recipe.quality === "poor" && " ⚠"}
-                      </span>
-                    </div>
-                  );
-                })}
-                <p className={styles.mixAttrib}>
-                  Mezcla de colores basada en{" "}
-                  <a
-                    href="https://github.com/scrtwpns/mixbox"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Mixbox
-                  </a>{" "}
-                  © Secret Weapons — CC BY-NC 4.0
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+        <div ref={svgContainerRef} className={styles.svgContainer} />
 
         {recipes &&
           palette.length > 0 &&
@@ -1248,8 +1148,6 @@ export default function PaintByNumbers() {
               </div>
             );
           })()}
-
-        <div ref={svgContainerRef} className={styles.svgContainer} />
 
         {hasOutput && (
           <>
