@@ -1143,26 +1143,37 @@ export default function PaintByNumbers() {
             }
             return (
               <div className={styles.guideCard}>
-                <div className={styles.guideHeader}>
-                  <div>
-                    <h3 className={styles.guideTitle}>
-                      Guía de mezclas de colores
-                    </h3>
-                    <p className={styles.guideSubtitle}>
-                      {recipes.length} colores y sus fórmulas para crearlos
-                    </p>
+                <div className={styles.guideHead}>
+                  <div className={styles.guideHeader}>
+                    <div>
+                      <h3 className={styles.guideTitle}>
+                        Guía de mezclas de colores
+                      </h3>
+                      <p className={styles.guideSubtitle}>
+                        {recipes.length} colores y sus fórmulas para crearlos
+                      </p>
+                    </div>
                   </div>
-                  <div className={styles.guideLegend}>
-                    {usedPaints.map((p) => (
-                      <span key={p.id} className={styles.guideLegendItem}>
+                  <div className={styles.basePaintsGrid}>
+                    {(usedPaints.length > 0
+                      ? usedPaints
+                      : DEFAULT_BASE_PAINTS
+                    ).map((p) => (
+                      <div key={p.id} className={styles.basePaintItem}>
                         <span
-                          className={styles.guideLegendDot}
+                          className={styles.basePaintSwatch}
                           style={{
                             backgroundColor: `rgb(${p.rgb[0]},${p.rgb[1]},${p.rgb[2]})`,
                           }}
+                          title={`${p.nameEn} — nº ${p.codigo} (${p.pigmento}) — ${p.rgb[0]},${p.rgb[1]},${p.rgb[2]}`}
                         />
-                        {p.nameEs}
-                      </span>
+                        <span className={styles.basePaintName}>
+                          {p.nameEs}
+                          <span className={styles.basePaintCode}>
+                            nº {p.codigo}
+                          </span>
+                        </span>
+                      </div>
                     ))}
                   </div>
                 </div>

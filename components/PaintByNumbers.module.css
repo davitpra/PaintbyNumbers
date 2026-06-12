@@ -373,15 +373,18 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
+.guideHead {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  padding: 18px 22px;
+  background: #fafafa;
+}
+
 .guideHeader {
   display: flex;
-  flex-wrap: wrap;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px 24px;
-  padding: 18px 22px;
-  background: #16314e;
-  color: #fff;
+  padding: 8px 8px;
 }
 
 .guideTitle {
@@ -395,7 +398,6 @@
 .guideSubtitle {
   margin: 4px 0 0;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.7);
 }
 
 .guideLegend {
