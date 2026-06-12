@@ -56,7 +56,7 @@ export function downloadPalettePng(
       ctx.fillStyle = "#fff";
       ctx.strokeStyle = "rgba(0,0,0,0.6)";
       ctx.lineWidth = 3;
-      const idx = String(i);
+      const idx = String(i + 1);
       const idxW = ctx.measureText(idx).width;
       ctx.strokeText(idx, margin + swatchSize / 2 - idxW / 2, y + swatchSize / 2 + 4);
       ctx.lineWidth = 1;
@@ -142,7 +142,7 @@ export function downloadPalettePng(
       ctx.strokeStyle = "#888";
       ctx.strokeRect(x, y, cellWidth, cellHeight - 20);
 
-      const nrText = i + "";
+      const nrText = i + 1 + "";
       ctx.fillStyle = "black";
       ctx.strokeStyle = "#CCC";
       ctx.font = "20px Tahoma";

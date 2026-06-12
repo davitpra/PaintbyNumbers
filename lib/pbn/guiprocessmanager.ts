@@ -449,13 +449,13 @@ export class GUIProcessManager {
                 if (addColorLabels) {
                     const txt = document.createElementNS(xmlns, "text");
                     txt.setAttribute("font-family", "Tahoma");
-                    const nrOfDigits = (f.color + "").length;
+                    const nrOfDigits = (f.color + 1 + "").length;
                     txt.setAttribute("font-size", (fontSize / nrOfDigits) + "");
                     txt.setAttribute("dominant-baseline", "middle");
                     txt.setAttribute("text-anchor", "middle");
                     txt.setAttribute("fill", fontColor);
 
-                    txt.textContent = f.color + "";
+                    txt.textContent = f.color + 1 + "";
 
                     const subsvg = document.createElementNS(xmlns, "svg");
                     subsvg.setAttribute("width", f.labelBounds.width * sizeMultiplier + "");
