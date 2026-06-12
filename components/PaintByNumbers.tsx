@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   GUIProcessManager,
   OutputTab,
@@ -44,8 +44,8 @@ const EXAMPLE_IMAGES: Record<string, string> = {
 
 const PHASE_WEIGHTS: Record<ProcessPhase | "svg", number> = {
   kMeans: 0.25,
-  facetBuilding: 0.10,
-  facetReduction: 0.30,
+  facetBuilding: 0.1,
+  facetReduction: 0.3,
   facetBorderPath: 0.15,
   facetBorderSegmentation: 0.07,
   facetLabelPlacement: 0.08,
@@ -71,7 +71,11 @@ const OUTPUT_TABS: { key: OutputTab; label: string }[] = [
   { key: "output-pane", label: "Output" },
 ];
 
-type OverallStatus = { progress: number; label: string; state: "idle" | "active" | "complete" };
+type OverallStatus = {
+  progress: number;
+  label: string;
+  state: "idle" | "active" | "complete";
+};
 
 interface PresetValues {
   resizeWidth: number;
@@ -130,10 +134,10 @@ export default function PaintByNumbers() {
   const [clusterPrecision, setClusterPrecision] = useState(1);
   const [randomSeed, setRandomSeed] = useState(0);
   const [colorSpace, setColorSpace] = useState<ClusteringColorSpace>(
-    ClusteringColorSpace.RGB
+    ClusteringColorSpace.RGB,
   );
   const [colorRestrictions, setColorRestrictions] = useState(
-    "//0,0,0\n//255,255,255\n"
+    "//0,0,0\n//255,255,255\n",
   );
   const [narrowPixelCleanupRuns, setNarrowPixelCleanupRuns] = useState(3);
   const [removeFacetsSmallerThan, setRemoveFacetsSmallerThan] = useState(20);
@@ -155,18 +159,29 @@ export default function PaintByNumbers() {
   const [pdfWidth, setPdfWidth] = useState<number>(21);
   const [pdfHeight, setPdfHeight] = useState<number>(29.7);
   const [paperFormat, setPaperFormat] = useState<PaperFormat>("a4");
-  const [paperOrientation, setPaperOrientation] = useState<PaperOrientation>("portrait");
-  const [cropModal, setCropModal] = useState<{ src: string; w: number; h: number } | null>(null);
+  const [paperOrientation, setPaperOrientation] =
+    useState<PaperOrientation>("portrait");
+  const [cropModal, setCropModal] = useState<{
+    src: string;
+    w: number;
+    h: number;
+  } | null>(null);
 
   // ui state
   const [inputTab, setInputTab] = useState<"input" | "options">("input");
   const [outputTab, setOutputTab] = useState<OutputTab | "log">("output-pane");
-  const [overall, setOverall] = useState<OverallStatus>({ progress: 0, label: "", state: "idle" });
+  const [overall, setOverall] = useState<OverallStatus>({
+    progress: 0,
+    label: "",
+    state: "idle",
+  });
   const [logLines, setLogLines] = useState<string[]>([]);
   const [palette, setPalette] = useState<RGB[]>([]);
   const [hasOutput, setHasOutput] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [recipes, setRecipes] = useState<import("@/lib/pbn/paintMixing").MixRecipe[] | null>(null);
+  const [recipes, setRecipes] = useState<
+    import("@/lib/pbn/paintMixing").MixRecipe[] | null
+  >(null);
   const [mixingBusy, setMixingBusy] = useState(false);
   const [mixingProgress, setMixingProgress] = useState(0);
   const [showBasePaints, setShowBasePaints] = useState(false);
@@ -182,7 +197,9 @@ export default function PaintByNumbers() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processResultRef = useRef<ProcessResult | null>(null);
-  const cancellationTokenRef = useRef<CancellationToken>(new CancellationToken());
+  const cancellationTokenRef = useRef<CancellationToken>(
+    new CancellationToken(),
+  );
   const overallProgressRef = useRef(0);
   const overallPctRef = useRef(-1);
   const phaseCompletedRunsRef = useRef<Record<string, number>>({});
@@ -208,7 +225,7 @@ export default function PaintByNumbers() {
       img.onerror = () => log("Unable to load example image: " + name);
       img.src = EXAMPLE_IMAGES[name];
     },
-    [drawImageToInput, log]
+    [drawImageToInput, log],
   );
 
   // load a default example & wire up clipboard paste
@@ -251,7 +268,7 @@ export default function PaintByNumbers() {
       };
       reader.readAsDataURL(files[0]);
     },
-    [drawImageToInput]
+    [drawImageToInput],
   );
 
   const applyPreset = (p: PresetValues) => {
@@ -331,21 +348,55 @@ export default function PaintByNumbers() {
     colorRestrictions,
   ]);
 
-  const updateOutput = useCallback(async (standalone = true) => {
-    const result = processResultRef.current;
-    const container = svgContainerRef.current;
-    if (!result || !container) return;
+  const updateOutput = useCallback(
+    async (standalone = true) => {
+      const result = processResultRef.current;
+      const container = svgContainerRef.current;
+      if (!result || !container) return;
 
-    const pipelineBase = standalone ? 0 : overallProgressRef.current;
-    if (standalone) {
-      overallProgressRef.current = 0;
-      overallPctRef.current = -1;
-      setOverall({ progress: 0, label: "SVG generation", state: "active" });
-    }
+      const pipelineBase = standalone ? 0 : overallProgressRef.current;
+      if (standalone) {
+        overallProgressRef.current = 0;
+        overallPctRef.current = -1;
+        setOverall({ progress: 0, label: "SVG generation", state: "active" });
+      }
 
-    const svg = await GUIProcessManager.createSVG(
-      result.facetResult,
-      result.colorsByIndex,
+      const svg = await GUIProcessManager.createSVG(
+        result.facetResult,
+        result.colorsByIndex,
+        sizeMultiplier,
+        fillFacets,
+        showBorders,
+        showLabels,
+        labelFontSize,
+        labelFontColor,
+        fillOpacity,
+        (svgProg) => {
+          if (cancellationTokenRef.current.isCancelled) {
+            throw new Error("Cancelled");
+          }
+          const p = standalone
+            ? svgProg
+            : pipelineBase + svgProg * PHASE_WEIGHTS.svg;
+          const pct = Math.floor(p * 100);
+          if (pct !== overallPctRef.current) {
+            overallPctRef.current = pct;
+            setOverall({
+              progress: p,
+              label: "SVG generation",
+              state: "active",
+            });
+          }
+        },
+      );
+
+      container.innerHTML = "";
+      container.appendChild(svg);
+      setPalette(result.colorsByIndex);
+      setRecipes(null);
+      setOverall({ progress: 1, label: "Done", state: "complete" });
+    },
+    [
       sizeMultiplier,
       fillFacets,
       showBorders,
@@ -353,33 +404,8 @@ export default function PaintByNumbers() {
       labelFontSize,
       labelFontColor,
       fillOpacity,
-      (svgProg) => {
-        if (cancellationTokenRef.current.isCancelled) {
-          throw new Error("Cancelled");
-        }
-        const p = standalone ? svgProg : pipelineBase + svgProg * PHASE_WEIGHTS.svg;
-        const pct = Math.floor(p * 100);
-        if (pct !== overallPctRef.current) {
-          overallPctRef.current = pct;
-          setOverall({ progress: p, label: "SVG generation", state: "active" });
-        }
-      }
-    );
-
-    container.innerHTML = "";
-    container.appendChild(svg);
-    setPalette(result.colorsByIndex);
-    setRecipes(null);
-    setOverall({ progress: 1, label: "Done", state: "complete" });
-  }, [
-    sizeMultiplier,
-    fillFacets,
-    showBorders,
-    showLabels,
-    labelFontSize,
-    labelFontColor,
-    fillOpacity,
-  ]);
+    ],
+  );
 
   const process = useCallback(async () => {
     const canvases = {
@@ -419,13 +445,16 @@ export default function PaintByNumbers() {
           const runs = multiRunPhases.has(key) ? totalRuns : 1;
           const done = phaseCompletedRunsRef.current[key] ?? 0;
           if (key === phase && state === "active") {
-            total += weight * (done + progress) / runs;
+            total += (weight * (done + progress)) / runs;
           } else {
-            total += weight * Math.min(done, runs) / runs;
+            total += (weight * Math.min(done, runs)) / runs;
           }
         }
 
-        const clamped = Math.max(overallProgressRef.current, Math.min(total, 0.95));
+        const clamped = Math.max(
+          overallProgressRef.current,
+          Math.min(total, 0.95),
+        );
         overallProgressRef.current = clamped;
 
         const pct = Math.floor(clamped * 100);
@@ -450,7 +479,7 @@ export default function PaintByNumbers() {
         settings,
         cancellationTokenRef.current,
         canvases as Parameters<typeof GUIProcessManager.process>[2],
-        callbacks
+        callbacks,
       );
       setHasOutput(true);
       await updateOutput(false);
@@ -494,7 +523,10 @@ export default function PaintByNumbers() {
   };
   const handleDownloadPalette = () => {
     if (processResultRef.current) {
-      downloadPalettePng(processResultRef.current.colorsByIndex, recipes ?? undefined);
+      downloadPalettePng(
+        processResultRef.current.colorsByIndex,
+        recipes ?? undefined,
+      );
     }
   };
 
@@ -505,7 +537,7 @@ export default function PaintByNumbers() {
     try {
       const { findRecipes } = await import("@/lib/pbn/paintMixing");
       const result = await findRecipes(palette, undefined, (done, total) =>
-        setMixingProgress(done / total)
+        setMixingProgress(done / total),
       );
       setRecipes(result);
     } finally {
@@ -517,7 +549,8 @@ export default function PaintByNumbers() {
     const svg = svgContainerRef.current?.querySelector("svg");
     if (!svg) return null;
     const w = parseInt(svg.getAttribute("width") || "0", 10) || svg.clientWidth;
-    const h = parseInt(svg.getAttribute("height") || "0", 10) || svg.clientHeight;
+    const h =
+      parseInt(svg.getAttribute("height") || "0", 10) || svg.clientHeight;
     return h > 0 ? w / h : null;
   };
 
@@ -530,7 +563,7 @@ export default function PaintByNumbers() {
   const onPdfHeightChange = (val: number) => {
     setPdfHeight(val);
     const aspect = getSvgAspect();
-    if (aspect && val > 0) setPdfWidth(Math.round((val * aspect) * 10) / 10);
+    if (aspect && val > 0) setPdfWidth(Math.round(val * aspect * 10) / 10);
   };
 
   const onPdfUnitChange = (newUnit: "cm" | "in") => {
@@ -542,19 +575,30 @@ export default function PaintByNumbers() {
 
   const handleDownloadPDF = () => {
     const svg = svgContainerRef.current?.querySelector("svg");
-    if (svg) void downloadPDF(svg as SVGSVGElement, { unit: pdfUnit, width: pdfWidth, height: pdfHeight } as PdfSize);
+    if (svg)
+      void downloadPDF(
+        svg as SVGSVGElement,
+        { unit: pdfUnit, width: pdfWidth, height: pdfHeight } as PdfSize,
+      );
   };
 
   const handleDownloadPDFStandard = async () => {
     const svg = svgContainerRef.current?.querySelector("svg");
     if (!svg) return;
-    const { dataUrl, width, height } = await svgToPngDataUrl(svg as SVGSVGElement);
+    const { dataUrl, width, height } = await svgToPngDataUrl(
+      svg as SVGSVGElement,
+    );
     setCropModal({ src: dataUrl, w: width, h: height });
   };
 
   const handleCropConfirm = (crop: CropRect) => {
     if (cropModal) {
-      void downloadPDFCropped(cropModal.src, crop, paperFormat, paperOrientation);
+      void downloadPDFCropped(
+        cropModal.src,
+        crop,
+        paperFormat,
+        paperOrientation,
+      );
     }
     setCropModal(null);
   };
@@ -574,11 +618,35 @@ export default function PaintByNumbers() {
       </p>
       <p>
         Example images:{" "}
-        <a href="#" onClick={(e) => { e.preventDefault(); loadExample("trivial"); }}>trivial</a>{" "}
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            loadExample("trivial");
+          }}
+        >
+          trivial
+        </a>{" "}
         -{" "}
-        <a href="#" onClick={(e) => { e.preventDefault(); loadExample("small"); }}>small</a>{" "}
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            loadExample("small");
+          }}
+        >
+          small
+        </a>{" "}
         -{" "}
-        <a href="#" onClick={(e) => { e.preventDefault(); loadExample("medium"); }}>medium</a>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            loadExample("medium");
+          }}
+        >
+          medium
+        </a>
       </p>
 
       {/* input / options tabs */}
@@ -608,7 +676,9 @@ export default function PaintByNumbers() {
             <button
               key={p.key}
               className={
-                isPresetActive(p.apply) ? styles.presetBtnActive : styles.presetBtn
+                isPresetActive(p.apply)
+                  ? styles.presetBtnActive
+                  : styles.presetBtn
               }
               onClick={() => applyPreset(p.apply)}
             >
@@ -927,7 +997,9 @@ export default function PaintByNumbers() {
               min={0}
               max={100}
               value={Math.round(fillOpacity * 100)}
-              onChange={(e) => setFillOpacity((parseInt(e.target.value) || 0) / 100)}
+              onChange={(e) =>
+                setFillOpacity((parseInt(e.target.value) || 0) / 100)
+              }
             />
           </label>
         </div>
@@ -957,8 +1029,8 @@ export default function PaintByNumbers() {
                 {mixingBusy
                   ? `Calculando… ${Math.round(mixingProgress * 100)}%`
                   : recipes
-                  ? "Recalcular"
-                  : "Calcular recetas"}
+                    ? "Recalcular"
+                    : "Calcular recetas"}
               </button>
             </div>
             <div className={styles.basePaintsSection}>
@@ -968,8 +1040,8 @@ export default function PaintByNumbers() {
                 onClick={() => setShowBasePaints((v) => !v)}
                 aria-expanded={showBasePaints}
               >
-                {showBasePaints ? "▼" : "▶"} Pinturas base ({DEFAULT_BASE_PAINTS.length}) /
-                Base paints
+                {showBasePaints ? "▼" : "▶"} Pinturas base (
+                {DEFAULT_BASE_PAINTS.length}) / Base paints
               </button>
               {showBasePaints && (
                 <div className={styles.basePaintsGrid}>
@@ -977,12 +1049,16 @@ export default function PaintByNumbers() {
                     <div key={p.id} className={styles.basePaintItem}>
                       <span
                         className={styles.basePaintSwatch}
-                        style={{ backgroundColor: `rgb(${p.rgb[0]},${p.rgb[1]},${p.rgb[2]})` }}
+                        style={{
+                          backgroundColor: `rgb(${p.rgb[0]},${p.rgb[1]},${p.rgb[2]})`,
+                        }}
                         title={`${p.nameEn} — nº ${p.codigo} (${p.pigmento}) — ${p.rgb[0]},${p.rgb[1]},${p.rgb[2]}`}
                       />
                       <span className={styles.basePaintName}>
                         {p.nameEs}
-                        <span className={styles.basePaintCode}>nº {p.codigo}</span>
+                        <span className={styles.basePaintCode}>
+                          nº {p.codigo}
+                        </span>
                       </span>
                     </div>
                   ))}
@@ -995,29 +1071,41 @@ export default function PaintByNumbers() {
                   const c = palette[i];
                   const m = recipe.mixedRgb;
                   const recipeText = recipe.entries
-                    .map(e => `${e.parts} ${e.parts === 1 ? "parte" : "partes"} ${e.paint.nameEs}`)
+                    .map(
+                      (e) =>
+                        `${e.parts} ${e.parts === 1 ? "parte" : "partes"} ${e.paint.nameEs}`,
+                    )
                     .join(" + ");
                   const recipeEn = recipe.entries
-                    .map(e => `${e.parts} part${e.parts === 1 ? "" : "s"} ${e.paint.nameEn}`)
+                    .map(
+                      (e) =>
+                        `${e.parts} part${e.parts === 1 ? "" : "s"} ${e.paint.nameEn}`,
+                    )
                     .join(" + ");
                   return (
                     <div key={i} className={styles.mixRow}>
                       <div
                         className={styles.mixSwatch}
-                        style={{ backgroundColor: `rgb(${c[0]},${c[1]},${c[2]})` }}
+                        style={{
+                          backgroundColor: `rgb(${c[0]},${c[1]},${c[2]})`,
+                        }}
                         title={`Color ${i}: ${c[0]},${c[1]},${c[2]}`}
                       >
                         {i}
                       </div>
                       <div
                         className={styles.mixSwatchResult}
-                        style={{ backgroundColor: `rgb(${m[0]},${m[1]},${m[2]})` }}
+                        style={{
+                          backgroundColor: `rgb(${m[0]},${m[1]},${m[2]})`,
+                        }}
                         title={`Mezcla: ${m[0]},${m[1]},${m[2]}`}
                       />
                       <span className={styles.mixRecipeText} title={recipeEn}>
                         {recipeText}
                       </span>
-                      <span className={`${styles.mixBadge} ${styles[`mix${recipe.quality.charAt(0).toUpperCase() + recipe.quality.slice(1)}`]}`}>
+                      <span
+                        className={`${styles.mixBadge} ${styles[`mix${recipe.quality.charAt(0).toUpperCase() + recipe.quality.slice(1)}`]}`}
+                      >
                         ΔE {recipe.deltaE.toFixed(1)}
                         {recipe.quality === "poor" && " ⚠"}
                       </span>
@@ -1026,7 +1114,11 @@ export default function PaintByNumbers() {
                 })}
                 <p className={styles.mixAttrib}>
                   Mezcla de colores basada en{" "}
-                  <a href="https://github.com/scrtwpns/mixbox" target="_blank" rel="noopener noreferrer">
+                  <a
+                    href="https://github.com/scrtwpns/mixbox"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     Mixbox
                   </a>{" "}
                   © Secret Weapons — CC BY-NC 4.0
@@ -1035,6 +1127,116 @@ export default function PaintByNumbers() {
             )}
           </div>
         )}
+
+        {recipes &&
+          palette.length > 0 &&
+          (() => {
+            const usedPaints: import("@/lib/pbn/basePaints").BasePaint[] = [];
+            const seen = new Set<string>();
+            for (const recipe of recipes) {
+              for (const e of recipe.entries) {
+                if (!seen.has(e.paint.id)) {
+                  seen.add(e.paint.id);
+                  usedPaints.push(e.paint);
+                }
+              }
+            }
+            return (
+              <div className={styles.guideCard}>
+                <div className={styles.guideHeader}>
+                  <div>
+                    <h3 className={styles.guideTitle}>
+                      Guía de mezclas de colores
+                    </h3>
+                    <p className={styles.guideSubtitle}>
+                      {recipes.length} colores y sus fórmulas para crearlos
+                    </p>
+                  </div>
+                  <div className={styles.guideLegend}>
+                    {usedPaints.map((p) => (
+                      <span key={p.id} className={styles.guideLegendItem}>
+                        <span
+                          className={styles.guideLegendDot}
+                          style={{
+                            backgroundColor: `rgb(${p.rgb[0]},${p.rgb[1]},${p.rgb[2]})`,
+                          }}
+                        />
+                        {p.nameEs}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className={styles.guideTableWrap}>
+                  <table className={styles.guideTable}>
+                    <thead>
+                      <tr>
+                        <th className={styles.guideColNum}>#</th>
+                        <th className={styles.guideColPreview}>Vista previa</th>
+                        <th>
+                          Fórmula de mezcla
+                          <span className={styles.guideColHint}>
+                            (suma de partes)
+                          </span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recipes.map((recipe, i) => {
+                        const m = recipe.mixedRgb;
+                        return (
+                          <tr key={i}>
+                            <td className={styles.guideNum}>{i + 1}</td>
+                            <td>
+                              <div className={styles.guidePreviewWrapper}>
+                                <span
+                                  className={styles.guidePreview}
+                                  style={{
+                                    backgroundColor: `rgb(${m[0]},${m[1]},${m[2]})`,
+                                  }}
+                                  title={`Mezcla: ${m[0]},${m[1]},${m[2]}`}
+                                />
+                                <span className={styles.guideEquals}>=</span>
+                              </div>
+                            </td>
+                            <td>
+                              <div className={styles.guideFormula}>
+                                {recipe.entries.map((e, j) => (
+                                  <Fragment key={j}>
+                                    {j > 0 && (
+                                      <span className={styles.guidePlus}>
+                                        +
+                                      </span>
+                                    )}
+                                    <span className={styles.guideComp}>
+                                      <span
+                                        className={styles.guideDot}
+                                        style={{
+                                          backgroundColor: `rgb(${e.paint.rgb[0]},${e.paint.rgb[1]},${e.paint.rgb[2]})`,
+                                        }}
+                                      />
+                                      <div className={styles.guideCompInfo}>
+                                        <span className={styles.guidePct}>
+                                          {e.parts}{" "}
+                                          {e.parts === 1 ? "parte" : "partes"}
+                                        </span>
+                                        <span className={styles.guideCompName}>
+                                          {e.paint.nameEs}
+                                        </span>
+                                      </div>
+                                    </span>
+                                  </Fragment>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
 
         <div ref={svgContainerRef} className={styles.svgContainer} />
 
@@ -1054,7 +1256,12 @@ export default function PaintByNumbers() {
             <div className={styles.optionRow}>
               <label>
                 Unit
-                <select value={pdfUnit} onChange={(e) => onPdfUnitChange(e.target.value as "cm" | "in")}>
+                <select
+                  value={pdfUnit}
+                  onChange={(e) =>
+                    onPdfUnitChange(e.target.value as "cm" | "in")
+                  }
+                >
                   <option value="cm">cm</option>
                   <option value="in">inches</option>
                 </select>
@@ -1066,7 +1273,9 @@ export default function PaintByNumbers() {
                   min={1}
                   step={0.1}
                   value={pdfWidth}
-                  onChange={(e) => onPdfWidthChange(parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    onPdfWidthChange(parseFloat(e.target.value) || 0)
+                  }
                 />
               </label>
               <label>
@@ -1076,7 +1285,9 @@ export default function PaintByNumbers() {
                   min={1}
                   step={0.1}
                   value={pdfHeight}
-                  onChange={(e) => onPdfHeightChange(parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    onPdfHeightChange(parseFloat(e.target.value) || 0)
+                  }
                 />
               </label>
               <button className={styles.btn} onClick={handleDownloadPDF}>
@@ -1088,7 +1299,9 @@ export default function PaintByNumbers() {
                 Paper size
                 <select
                   value={paperFormat}
-                  onChange={(e) => setPaperFormat(e.target.value as PaperFormat)}
+                  onChange={(e) =>
+                    setPaperFormat(e.target.value as PaperFormat)
+                  }
                 >
                   <option value="a3">A3</option>
                   <option value="a4">A4</option>
@@ -1102,13 +1315,18 @@ export default function PaintByNumbers() {
                 Orientation
                 <select
                   value={paperOrientation}
-                  onChange={(e) => setPaperOrientation(e.target.value as PaperOrientation)}
+                  onChange={(e) =>
+                    setPaperOrientation(e.target.value as PaperOrientation)
+                  }
                 >
                   <option value="portrait">Portrait</option>
                   <option value="landscape">Landscape</option>
                 </select>
               </label>
-              <button className={styles.btn} onClick={() => void handleDownloadPDFStandard()}>
+              <button
+                className={styles.btn}
+                onClick={() => void handleDownloadPDFStandard()}
+              >
                 Select area &amp; download PDF
               </button>
             </div>
