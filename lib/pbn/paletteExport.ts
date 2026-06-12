@@ -5,6 +5,31 @@
 import { RGB } from "./common";
 import type { MixRecipe } from "./paintMixing";
 
+/**
+ * Renders an on-screen DOM node (the "Guía de mezclas de colores" card) to a
+ * PNG so the download matches exactly what the user sees, then downloads it.
+ */
+export async function downloadGuidePng(
+  node: HTMLElement,
+  filename: string = "guia-mezclas.png"
+) {
+  // html-to-image renders via the browser's own <foreignObject> path, so CSS
+  // mask-image + SVG filters (the brush-stroke swatches) are preserved — unlike
+  // html2canvas, which would flatten them to plain rectangles.
+  const { toPng } = await import("html-to-image");
+  const dataURL = await toPng(node, {
+    backgroundColor: "#ffffff",
+    pixelRatio: 2,
+    cacheBust: true,
+  });
+  const dl = document.createElement("a");
+  document.body.appendChild(dl);
+  dl.setAttribute("href", dataURL);
+  dl.setAttribute("download", filename);
+  dl.click();
+  document.body.removeChild(dl);
+}
+
 export function downloadPalettePng(
   colorsByIndex: RGB[],
   recipes?: MixRecipe[],

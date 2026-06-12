@@ -390,6 +390,16 @@ export class GUIProcessManager {
         // so it renders at full coordinate size anchored at the top-left corner.
         svg.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight}`);
 
+        // All facet fills go inside this group. Applying opacity to the group
+        // (instead of fill-opacity per facet) flattens the facets first and then
+        // composites the result once, so overlapping/nested facets don't stack
+        // translucent layers and equal colors render identically. Labels are
+        // appended to the svg directly (after this group) so they stay fully
+        // opaque and on top.
+        const fillGroup = document.createElementNS(xmlns, "g");
+        fillGroup.style.opacity = fillOpacity + "";
+        svg.appendChild(fillGroup);
+
         const yielder = createYielder(150);
         let count = 0;
         for (const f of facetResult.facets) {
@@ -437,12 +447,11 @@ export class GUIProcessManager {
 
                 if (fill) {
                     svgPath.style.fill = `rgb(${colorsByIndex[f.color][0]},${colorsByIndex[f.color][1]},${colorsByIndex[f.color][2]})`;
-                    svgPath.style.fillOpacity = fillOpacity + "";
                 } else {
                     svgPath.style.fill = "none";
                 }
 
-                svg.appendChild(svgPath);
+                fillGroup.appendChild(svgPath);
 
                 // add the color labels if necessary. I mean, this is the whole idea behind the paint by numbers part
                 // so I don't know why you would hide them

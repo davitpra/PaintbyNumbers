@@ -120,6 +120,10 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  * standard-sized page, filling it completely. The crop aspect ratio is expected
  * to match the page aspect ratio (see getPaperAspect), so the image is not
  * distorted nor letterboxed.
+ *
+ * When `guideNode` is provided (the on-screen "Guía de mezclas de colores"
+ * card), it is captured and appended as one or more extra pages — sliced
+ * vertically so a long guide stays readable at full page width.
  */
 export async function downloadPDFCropped(
     pngDataUrl: string,
@@ -127,6 +131,7 @@ export async function downloadPDFCropped(
     format: PaperFormat,
     orientation: PaperOrientation,
     filename: string = "paintbynumbers.pdf",
+    guideNode?: HTMLElement,
 ): Promise<void> {
     const img = await loadImage(pngDataUrl);
 
@@ -143,5 +148,59 @@ export async function downloadPDFCropped(
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     doc.addImage(croppedUrl, "PNG", 0, 0, pageW, pageH);
+
+    if (guideNode) {
+        await appendGuidePages(doc, guideNode, format, orientation, pageW, pageH);
+    }
+
     doc.save(filename);
+}
+
+/**
+ * Captures a DOM node and appends it to the PDF, slicing it vertically across
+ * as many pages as needed so it fits the page width without shrinking the text.
+ */
+async function appendGuidePages(
+    doc: jsPDF,
+    guideNode: HTMLElement,
+    format: PaperFormat,
+    orientation: PaperOrientation,
+    pageW: number,
+    pageH: number,
+): Promise<void> {
+    // Use html-to-image (browser-native <foreignObject> rendering) so the
+    // brush-stroke swatches — CSS mask-image + SVG filters — survive the
+    // capture instead of being flattened to rectangles like html2canvas does.
+    const { toCanvas } = await import("html-to-image");
+    const guideCanvas = await toCanvas(guideNode, {
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+        cacheBust: true,
+    });
+
+    const margin = 10; // mm
+    const availW = pageW - margin * 2;
+    const availH = pageH - margin * 2;
+    // Source pixels per millimetre once the guide is scaled to the page width.
+    const pxPerMm = guideCanvas.width / availW;
+    const pageSliceHpx = availH * pxPerMm;
+
+    for (let srcY = 0; srcY < guideCanvas.height; srcY += pageSliceHpx) {
+        const sliceHpx = Math.min(pageSliceHpx, guideCanvas.height - srcY);
+
+        const slice = document.createElement("canvas");
+        slice.width = guideCanvas.width;
+        slice.height = Math.max(1, Math.round(sliceHpx));
+        const sctx = slice.getContext("2d")!;
+        sctx.fillStyle = "#ffffff";
+        sctx.fillRect(0, 0, slice.width, slice.height);
+        sctx.drawImage(
+            guideCanvas,
+            0, srcY, guideCanvas.width, sliceHpx,
+            0, 0, slice.width, slice.height,
+        );
+
+        doc.addPage(format, orientation);
+        doc.addImage(slice.toDataURL("image/png"), "PNG", margin, margin, availW, sliceHpx / pxPerMm);
+    }
 }

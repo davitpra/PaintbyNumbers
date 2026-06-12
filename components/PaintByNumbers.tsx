@@ -22,7 +22,7 @@ import {
   PdfSize,
   svgToPngDataUrl,
 } from "@/lib/pbn/svgExport";
-import { downloadPalettePng } from "@/lib/pbn/paletteExport";
+import { downloadGuidePng, downloadPalettePng } from "@/lib/pbn/paletteExport";
 import { DEFAULT_BASE_PAINTS } from "@/lib/pbn/basePaints";
 import CropModal from "./CropModal";
 import styles from "./PaintByNumbers.module.css";
@@ -194,6 +194,7 @@ export default function PaintByNumbers() {
   const borderSegmentationCanvasRef = useRef<HTMLCanvasElement>(null);
   const labelPlacementCanvasRef = useRef<HTMLCanvasElement>(null);
   const svgContainerRef = useRef<HTMLDivElement>(null);
+  const guideRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processResultRef = useRef<ProcessResult | null>(null);
@@ -393,7 +394,6 @@ export default function PaintByNumbers() {
       container.innerHTML = "";
       container.appendChild(svg);
       setPalette(result.colorsByIndex);
-      setRecipes(null);
       setOverall({ progress: 1, label: "Done", state: "complete" });
     },
     [
@@ -441,6 +441,8 @@ export default function PaintByNumbers() {
     phaseCompletedRunsRef.current = {};
     setOverall({ progress: 0, label: "Starting…", state: "active" });
     setLogLines([]);
+    // the palette is about to be regenerated; drop any stale recipes
+    setRecipes(null);
 
     // cancel old process & create new
     cancellationTokenRef.current.isCancelled = true;
@@ -547,7 +549,11 @@ export default function PaintByNumbers() {
     if (svg) void downloadPNG(svg as SVGSVGElement);
   };
   const handleDownloadPalette = () => {
-    if (processResultRef.current) {
+    // Prefer capturing the on-screen mixing guide so the download matches it
+    // exactly; fall back to the canvas-rendered palette if it isn't available.
+    if (guideRef.current && recipes && palette.length > 0) {
+      void downloadGuidePng(guideRef.current);
+    } else if (processResultRef.current) {
       downloadPalettePng(
         processResultRef.current.colorsByIndex,
         recipes ?? undefined,
@@ -603,11 +609,16 @@ export default function PaintByNumbers() {
 
   const handleCropConfirm = (crop: CropRect) => {
     if (cropModal) {
+      // Append the on-screen mixing guide as extra page(s) when available.
+      const guideNode =
+        recipes && palette.length > 0 ? guideRef.current ?? undefined : undefined;
       void downloadPDFCropped(
         cropModal.src,
         crop,
         paperFormat,
         paperOrientation,
+        "paintbynumbers.pdf",
+        guideNode,
       );
     }
     setCropModal(null);
@@ -1042,7 +1053,7 @@ export default function PaintByNumbers() {
               }
             }
             return (
-              <div className={styles.guideCard}>
+              <div className={styles.guideCard} ref={guideRef}>
                 <div className={styles.guideHead}>
                   <div className={styles.guideHeader}>
                     <div>

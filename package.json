@@ -12,6 +12,7 @@
   "author": "drake7707",
   "license": "Apache-2.0",
   "dependencies": {
+    "html-to-image": "^1.11.13",
     "jspdf": "^4.2.1",
     "next": "^15.5.4",
     "react": "^19.1.1",
