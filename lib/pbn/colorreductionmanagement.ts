@@ -8,6 +8,12 @@ import { ClusteringColorSpace, Settings } from "./settings";
 import { Uint8Array2D } from "./structs/typedarrays";
 import { Random } from "./random";
 
+// A forced palette color (e.g. black/white) is only added when the image
+// actually contains it: at least FIXED_COLOR_PRESENCE_MIN_FRACTION of the pixels
+// must lie within FIXED_COLOR_PRESENCE_MAX_DELTAE (Lab ΔE) of that color.
+const FIXED_COLOR_PRESENCE_MAX_DELTAE = 20; // ~black up to RGB(45,45,45), ~white down to RGB(208,208,208)
+const FIXED_COLOR_PRESENCE_MIN_FRACTION = 0.001; // ≥0.1% of pixels
+
 export class ColorMapResult {
     public imgColorIndices!: Uint8Array2D;
     public colorsByIndex!: RGB[];
@@ -114,10 +120,15 @@ export class ColorReducer {
             vectors[vIdx++] = vec;
         }
 
-        // build pinned centroids for the colors that must always be in the palette
-        // (e.g. black/white), converted into the active clustering color space
+        // build pinned centroids for the colors that should appear in the palette
+        // (e.g. black/white), but only for those actually present in the image,
+        // converted into the active clustering color space
+        const totalPixels = imgData.width * imgData.height;
         const fixedCentroids: Vector[] = [];
         for (const rgb of settings.kMeansFixedColors) {
+            if (!ColorReducer.isColorPresent(rgb, pointsByColor, totalPixels)) {
+                continue;
+            }
             let data: number[];
             if (settings.kMeansClusteringColorSpace === ClusteringColorSpace.RGB) {
                 data = rgb;
@@ -242,6 +253,36 @@ export class ColorReducer {
                 }
             }
         }
+    }
+
+    /**
+     *  Determines whether a target color (e.g. pure black/white) is actually
+     *  present in the image, so it's only forced into the palette when needed.
+     *  A color counts as present when at least FIXED_COLOR_PRESENCE_MIN_FRACTION
+     *  of the pixels lie within FIXED_COLOR_PRESENCE_MAX_DELTAE (Lab ΔE) of it.
+     */
+    public static isColorPresent(target: RGB, pointsByColor: IMap<number[]>, totalPixels: number): boolean {
+        if (totalPixels === 0) {
+            return false;
+        }
+        const targetLab = rgb2lab(target);
+        const minPixels = totalPixels * FIXED_COLOR_PRESENCE_MIN_FRACTION;
+        let matched = 0;
+        for (const color of Object.keys(pointsByColor)) {
+            const rgb: number[] = color.split(",").map((v) => parseInt(v));
+            const lab = rgb2lab(rgb);
+            const dl = lab[0] - targetLab[0];
+            const da = lab[1] - targetLab[1];
+            const db = lab[2] - targetLab[2];
+            const deltaE = Math.sqrt(dl * dl + da * da + db * db);
+            if (deltaE <= FIXED_COLOR_PRESENCE_MAX_DELTAE) {
+                matched += pointsByColor[color].length;
+                if (matched >= minPixels) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

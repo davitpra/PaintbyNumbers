@@ -177,7 +177,7 @@ export default function PaintByNumbers() {
                 originalSrc={processing.compareImgs.original}
                 processedSrc={processing.compareImgs.processed}
                 leftLabel="Original"
-                rightLabel="Resultado"
+                rightLabel="Result"
               />
             )}
           </div>

@@ -20,9 +20,6 @@ export function useInputOptions() {
   const [colorRestrictions, setColorRestrictions] = useState(
     "//0,0,0\n//255,255,255\n",
   );
-  // force pure black/white into the palette as dedicated swatches
-  const [includeBlack, setIncludeBlack] = useState(true);
-  const [includeWhite, setIncludeWhite] = useState(true);
   const [narrowPixelCleanupRuns, setNarrowPixelCleanupRuns] = useState(3);
   const [removeFacetsSmallerThan, setRemoveFacetsSmallerThan] = useState(20);
   const [maximumNumberOfFacets, setMaximumNumberOfFacets] = useState(100000);
@@ -65,9 +62,12 @@ export function useInputOptions() {
     settings.resizeImageWidth = resizeWidth;
     settings.resizeImageHeight = resizeHeight;
 
-    settings.kMeansFixedColors = [];
-    if (includeBlack) settings.kMeansFixedColors.push([0, 0, 0]);
-    if (includeWhite) settings.kMeansFixedColors.push([255, 255, 255]);
+    // black and white are candidates; the pipeline only adds them to the palette
+    // when the image actually contains them (see ColorReducer.isColorPresent)
+    settings.kMeansFixedColors = [
+      [0, 0, 0],
+      [255, 255, 255],
+    ];
 
     settings.kMeansColorRestrictions = [];
     for (const line of colorRestrictions.split("\n")) {
@@ -104,8 +104,6 @@ export function useInputOptions() {
     resizeWidth,
     resizeHeight,
     colorRestrictions,
-    includeBlack,
-    includeWhite,
   ]);
 
   return {
@@ -118,8 +116,6 @@ export function useInputOptions() {
     randomSeed,
     colorSpace,
     colorRestrictions,
-    includeBlack,
-    includeWhite,
     narrowPixelCleanupRuns,
     removeFacetsSmallerThan,
     maximumNumberOfFacets,
@@ -134,8 +130,6 @@ export function useInputOptions() {
     setRandomSeed,
     setColorSpace,
     setColorRestrictions,
-    setIncludeBlack,
-    setIncludeWhite,
     setNarrowPixelCleanupRuns,
     setRemoveFacetsSmallerThan,
     setMaximumNumberOfFacets,
