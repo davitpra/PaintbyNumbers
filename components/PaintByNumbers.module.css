@@ -635,6 +635,102 @@
   cursor: default;
 }
 
+/* ---- Input options pane ---- */
+.inputPane {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 16px 0;
+}
+
+.optGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.optGroup:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.optGroupTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+
+.presetRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fieldSub {
+  margin-top: -2px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* Segmented control used for radio groups (color space, removal order) */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--background-secondary, #fafafa);
+  width: fit-content;
+}
+
+.segment,
+.segmentActive {
+  position: relative;
+  padding: 7px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--muted);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.segment + .segment,
+.segment + .segmentActive,
+.segmentActive + .segment,
+.segmentActive + .segmentActive {
+  border-left: 1px solid var(--border);
+}
+
+.segment:hover {
+  color: var(--text);
+}
+
+.segmentActive {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.segmentInput {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.segmentInput:focus-visible + .segmentActive,
+.segment:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
 .mixPanel {
   margin: 8px 0 16px;
   border: 1px solid var(--border);

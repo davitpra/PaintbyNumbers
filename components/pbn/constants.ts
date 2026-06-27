@@ -50,7 +50,7 @@ export interface PresetValues {
 export const PRESETS: { key: string; label: string; apply: PresetValues }[] = [
   {
     key: "photo",
-    label: "Photo (fast)",
+    label: "Fast",
     apply: {
       resizeWidth: 600,
       resizeHeight: 600,
@@ -62,7 +62,7 @@ export const PRESETS: { key: string; label: string; apply: PresetValues }[] = [
   },
   {
     key: "illustration",
-    label: "Illustration (default)",
+    label: "Balanced",
     apply: {
       resizeWidth: 1024,
       resizeHeight: 1024,
