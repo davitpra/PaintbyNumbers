@@ -81,8 +81,42 @@ export default function PaintByNumbers() {
               type="file"
               accept="image/x-png,image/gif,image/jpeg"
               onChange={input.onFileChange}
+              hidden
             />
-            {"Place holder for drag-and-drop area"}
+            <button
+              type="button"
+              className={`${styles.dropzone} ${
+                input.isDragging ? styles.dropzoneActive : ""
+              } ${input.imageSrc ? styles.dropzoneFilled : ""}`}
+              onClick={input.openFilePicker}
+              onDragOver={input.onDragOver}
+              onDragLeave={input.onDragLeave}
+              onDrop={input.onDrop}
+            >
+              {input.imageSrc ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={input.imageSrc}
+                    alt="Selected image preview"
+                    className={styles.dropzonePreview}
+                  />
+                  <span className={styles.dropzoneOverlay}>
+                    Click or drop to replace
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className={styles.dropzoneText}>
+                    Drag &amp; drop your image here, or{" "}
+                    <strong>click to browse</strong>
+                  </span>
+                  <span className={styles.dropzoneHint}>
+                    Paste from your clipboard (Ctrl+V) · PNG, JPG or GIF
+                  </span>
+                </>
+              )}
+            </button>
           </section>
 
           {/* Step 2: Image settings */}
@@ -94,25 +128,20 @@ export default function PaintByNumbers() {
             <InputOptionsPane opts={inputOptions} />
           </section>
 
-          {/* Step 3: Output settings */}
+          {/* Step 3: Preview & download */}
           <section className={styles.stepCard}>
             <h3 className={styles.stepTitle}>
               <span className={styles.stepNum}>3</span>
-              Output settings
-            </h3>
-            <RenderOptionsPane
-              opts={renderOptions}
-              palette={processing.palette}
-              svgContainerRef={processing.svgContainerRef}
-            />
-          </section>
-
-          {/* Step 4: Preview & download */}
-          <section className={styles.stepCard}>
-            <h3 className={styles.stepTitle}>
-              <span className={styles.stepNum}>4</span>
               Preview &amp; download
             </h3>
+            <ExportControls exp={exp} hasOutput={processing.hasOutput} />
+          </section>
+        </aside>
+
+        {/* ---- Main: preview area ---- */}
+        <main className={styles.main}>
+          <div className={styles.previewBar}>
+            <strong>Preview</strong>
             <button
               className={styles.btn}
               onClick={() => void processing.process()}
@@ -125,16 +154,9 @@ export default function PaintByNumbers() {
                 Cancel
               </button>
             )}
-            <ProgressBar overall={processing.overall} />
-            <ExportControls exp={exp} hasOutput={processing.hasOutput} />
-          </section>
-        </aside>
-
-        {/* ---- Main: preview area ---- */}
-        <main className={styles.main}>
-          <div className={styles.previewBar}>
-            <strong>Preview</strong>
           </div>
+
+          <ProgressBar overall={processing.overall} />
 
           <div className={styles.previewArea}>
             <div className={styles.canvasWrap}>
@@ -154,7 +176,11 @@ export default function PaintByNumbers() {
           </div>
 
           <div className={styles.zoomBar}>
-            <span>100%</span>
+            <RenderOptionsPane
+              opts={renderOptions}
+              palette={processing.palette}
+              svgContainerRef={processing.svgContainerRef}
+            />
           </div>
 
           <section className={styles.paletteSection}>
