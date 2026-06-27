@@ -146,7 +146,7 @@ export default function PaintByNumbers() {
   const [fillFacets, setFillFacets] = useState(true);
   const [showBorders, setShowBorders] = useState(true);
   const [sizeMultiplier, setSizeMultiplier] = useState(3);
-  const [labelFontSize, setLabelFontSize] = useState(50);
+  const [labelFontSize, setLabelFontSize] = useState(12);
   const [labelFontColor, setLabelFontColor] = useState("#000");
   const [fillOpacity, setFillOpacity] = useState(1);
 
@@ -940,11 +940,11 @@ export default function PaintByNumbers() {
             />
           </label>
           <label>
-            Label font size
+            Label size
             <input
               type="number"
               min={1}
-              max={100}
+              max={40}
               value={labelFontSize}
               onChange={(e) => setLabelFontSize(parseInt(e.target.value) || 1)}
             />

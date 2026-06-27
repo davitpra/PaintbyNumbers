@@ -400,6 +400,11 @@ export class GUIProcessManager {
         fillGroup.style.opacity = fillOpacity + "";
         svg.appendChild(fillGroup);
 
+        // strokeGroup has no opacity — borders stay fully opaque regardless of fillOpacity.
+        // Appended after fillGroup so borders render on top of fills.
+        const strokeGroup = document.createElementNS(xmlns, "g");
+        svg.appendChild(strokeGroup);
+
         const yielder = createYielder(150);
         let count = 0;
         for (const f of facetResult.facets) {
@@ -418,9 +423,7 @@ export class GUIProcessManager {
                     newpath.push(newpath[0]);
                 } // close loop if necessary
 
-                // Create a path in SVG's namespace
-                // using quadratic curve absolute positions
-                const svgPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                // Build path data (shared by fill and stroke paths)
                 let data = "M ";
                 data += newpath[0].x * sizeMultiplier + " " + newpath[0].y * sizeMultiplier + " ";
                 for (let i: number = 1; i < newpath.length; i++) {
@@ -430,28 +433,33 @@ export class GUIProcessManager {
                 }
                 data += "Z";
 
-                svgPath.setAttribute("data-facetId", f.id + "");
-                // Set path's data
-                svgPath.setAttribute("d", data);
-
-                if (stroke) {
-                    svgPath.style.stroke = "#000";
-                } else {
-                    // make the border the same color as the fill color if there is no border stroke
-                    // to not have gaps in between facets
-                    if (fill) {
-                        svgPath.style.stroke = `rgb(${colorsByIndex[f.color][0]},${colorsByIndex[f.color][1]},${colorsByIndex[f.color][2]})`;
-                    }
-                }
-                svgPath.style.strokeWidth = "1px"; // Set stroke width
-
+                // Fill path — color fill only, no stroke. Goes in fillGroup which has opacity applied.
+                const fillPath = document.createElementNS(xmlns, "path");
+                fillPath.setAttribute("data-facetId", f.id + "");
+                fillPath.setAttribute("d", data);
+                fillPath.style.stroke = "none";
                 if (fill) {
-                    svgPath.style.fill = `rgb(${colorsByIndex[f.color][0]},${colorsByIndex[f.color][1]},${colorsByIndex[f.color][2]})`;
+                    fillPath.style.fill = `rgb(${colorsByIndex[f.color][0]},${colorsByIndex[f.color][1]},${colorsByIndex[f.color][2]})`;
                 } else {
-                    svgPath.style.fill = "none";
+                    fillPath.style.fill = "none";
                 }
+                fillGroup.appendChild(fillPath);
 
-                fillGroup.appendChild(svgPath);
+                // Stroke path — border only, no fill. Goes in strokeGroup (no opacity) so borders stay fully opaque.
+                if (stroke || fill) {
+                    const strokePath = document.createElementNS(xmlns, "path");
+                    strokePath.setAttribute("data-facetId", f.id + "");
+                    strokePath.setAttribute("d", data);
+                    strokePath.style.fill = "none";
+                    strokePath.style.strokeWidth = "1px";
+                    if (stroke) {
+                        strokePath.style.stroke = "#000";
+                    } else {
+                        // Close pixel-gaps between adjacent facets using the facet's own color
+                        strokePath.style.stroke = `rgb(${colorsByIndex[f.color][0]},${colorsByIndex[f.color][1]},${colorsByIndex[f.color][2]})`;
+                    }
+                    strokeGroup.appendChild(strokePath);
+                }
 
                 // add the color labels if necessary. I mean, this is the whole idea behind the paint by numbers part
                 // so I don't know why you would hide them
@@ -459,16 +467,26 @@ export class GUIProcessManager {
                     const txt = document.createElementNS(xmlns, "text");
                     txt.setAttribute("font-family", "Tahoma");
                     const nrOfDigits = (f.color + 1 + "").length;
-                    txt.setAttribute("font-size", (fontSize / nrOfDigits) + "");
+                    // Glyph size is fixed within the 100x100 viewBox (only compensating for
+                    // multi-digit width). The final physical size is dictated solely by the
+                    // capped box below, so all numbers render at a uniform size.
+                    txt.setAttribute("font-size", (90 / nrOfDigits) + "");
                     txt.setAttribute("dominant-baseline", "middle");
                     txt.setAttribute("text-anchor", "middle");
                     txt.setAttribute("fill", fontColor);
 
                     txt.textContent = f.color + 1 + "";
 
+                    // Cap the label box to a uniform target size (fontSize). Facets with enough
+                    // room render at the uniform size; smaller facets shrink so the number fits.
+                    const boxW = Math.min(f.labelBounds.width, fontSize);
+                    const boxH = Math.min(f.labelBounds.height, fontSize);
+                    const centerX = f.labelBounds.minX + f.labelBounds.width / 2;
+                    const centerY = f.labelBounds.minY + f.labelBounds.height / 2;
+
                     const subsvg = document.createElementNS(xmlns, "svg");
-                    subsvg.setAttribute("width", f.labelBounds.width * sizeMultiplier + "");
-                    subsvg.setAttribute("height", f.labelBounds.height * sizeMultiplier + "");
+                    subsvg.setAttribute("width", boxW * sizeMultiplier + "");
+                    subsvg.setAttribute("height", boxH * sizeMultiplier + "");
                     subsvg.setAttribute("overflow", "visible");
                     subsvg.setAttribute("viewBox", "-50 -50 100 100");
                     subsvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
@@ -477,7 +495,8 @@ export class GUIProcessManager {
 
                     const g = document.createElementNS(xmlns, "g");
                     g.setAttribute("class", "label");
-                    g.setAttribute("transform", "translate(" + f.labelBounds.minX * sizeMultiplier + "," + f.labelBounds.minY * sizeMultiplier + ")");
+                    // Re-center the capped box within the facet's available room.
+                    g.setAttribute("transform", "translate(" + (centerX - boxW / 2) * sizeMultiplier + "," + (centerY - boxH / 2) * sizeMultiplier + ")");
                     g.appendChild(subsvg);
                     svg.appendChild(g);
                 }
