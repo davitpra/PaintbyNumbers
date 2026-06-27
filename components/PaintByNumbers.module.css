@@ -45,6 +45,42 @@
   background: #fff;
 }
 
+/* processing animation: a shimmer sweep across the image while it's processed */
+.canvasWrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+}
+
+.processingOverlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.processingOverlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: pbnShimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes pbnShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .optionRow {
   display: flex;
   flex-wrap: wrap;

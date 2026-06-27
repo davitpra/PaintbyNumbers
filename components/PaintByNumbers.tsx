@@ -14,7 +14,6 @@ import { usePaintMixing } from "./pbn/usePaintMixing";
 import { useProcessing } from "./pbn/useProcessing";
 import { useExport } from "./pbn/useExport";
 import InputOptionsPane from "./pbn/InputOptionsPane";
-import OutputTabs from "./pbn/OutputTabs";
 import ProgressBar from "./pbn/ProgressBar";
 import RenderOptionsPane from "./pbn/RenderOptionsPane";
 import MixingGuide from "./pbn/MixingGuide";
@@ -22,7 +21,7 @@ import ExportControls from "./pbn/ExportControls";
 import styles from "./PaintByNumbers.module.css";
 
 export default function PaintByNumbers() {
-  const { logLines, log, clearLog } = useLog();
+  const { log, clearLog } = useLog();
   const input = useImageInput(log);
   const inputOptions = useInputOptions();
   const renderOptions = useRenderOptions();
@@ -71,17 +70,6 @@ export default function PaintByNumbers() {
 
       <InputOptionsPane opts={inputOptions} />
 
-      <div className={styles.pane}>
-        <canvas ref={input.inputCanvasRef} className={styles.canvas} />
-      </div>
-
-      <button
-        className={styles.btn}
-        onClick={() => void processing.process()}
-        disabled={processing.isProcessing}
-      >
-        {processing.isProcessing ? "Processing..." : "Process image"}
-      </button>
       {processing.isProcessing && (
         <button className={styles.btnCancel} onClick={processing.cancel}>
           Cancel
@@ -90,56 +78,29 @@ export default function PaintByNumbers() {
 
       <ProgressBar overall={processing.overall} />
 
-      <OutputTabs
-        outputTab={processing.outputTab}
-        onSelect={processing.setOutputTab}
-      />
+      <div className={styles.pane}>
+        <div className={styles.canvasWrap}>
+          <canvas ref={input.inputCanvasRef} className={styles.canvas} />
+          {processing.isProcessing && (
+            <div className={styles.processingOverlay} />
+          )}
+        </div>
+      </div>
 
-      <div
-        hidden={processing.outputTab !== "kmeans-pane"}
-        className={styles.pane}
-      >
-        <canvas ref={processing.kmeansCanvasRef} className={styles.canvas} />
-      </div>
-      <div
-        hidden={processing.outputTab !== "reduction-pane"}
-        className={styles.pane}
-      >
-        <canvas ref={processing.reductionCanvasRef} className={styles.canvas} />
-      </div>
-      <div
-        hidden={processing.outputTab !== "borderpath-pane"}
-        className={styles.pane}
-      >
-        <canvas
-          ref={processing.borderPathCanvasRef}
-          className={styles.canvas}
+      {exp.cropModal && (
+        <CropModal
+          imageSrc={exp.cropModal.src}
+          imageWidth={exp.cropModal.w}
+          imageHeight={exp.cropModal.h}
+          aspect={getPaperAspect(exp.paperFormat, exp.paperOrientation)}
+          title={`${PAPER_LABELS[exp.paperFormat]} ${exp.paperOrientation}`}
+          onCancel={() => exp.setCropModal(null)}
+          onConfirm={exp.handleCropConfirm}
         />
-      </div>
-      <div
-        hidden={processing.outputTab !== "bordersegmentation-pane"}
-        className={styles.pane}
-      >
-        <canvas
-          ref={processing.borderSegmentationCanvasRef}
-          className={styles.canvas}
-        />
-      </div>
-      <div
-        hidden={processing.outputTab !== "labelplacement-pane"}
-        className={styles.pane}
-      >
-        <canvas
-          ref={processing.labelPlacementCanvasRef}
-          className={styles.canvas}
-        />
-      </div>
+      )}
 
       {/* output pane */}
-      <div
-        hidden={processing.outputTab !== "output-pane"}
-        className={styles.pane}
-      >
+      <div className={styles.pane}>
         <RenderOptionsPane
           opts={renderOptions}
           palette={processing.palette}
@@ -164,25 +125,23 @@ export default function PaintByNumbers() {
         <ExportControls exp={exp} hasOutput={processing.hasOutput} />
       </div>
 
-      <div hidden={processing.outputTab !== "log"} className={styles.pane}>
-        <div className={styles.log}>
-          {logLines.map((line, i) => (
-            <div key={i}>{line}</div>
-          ))}
-        </div>
-      </div>
+      <button
+        className={styles.btn}
+        onClick={() => void processing.process()}
+        disabled={processing.isProcessing}
+      >
+        {processing.isProcessing ? "Processing..." : "Process image"}
+      </button>
 
-      {exp.cropModal && (
-        <CropModal
-          imageSrc={exp.cropModal.src}
-          imageWidth={exp.cropModal.w}
-          imageHeight={exp.cropModal.h}
-          aspect={getPaperAspect(exp.paperFormat, exp.paperOrientation)}
-          title={`${PAPER_LABELS[exp.paperFormat]} ${exp.paperOrientation}`}
-          onCancel={() => exp.setCropModal(null)}
-          onConfirm={exp.handleCropConfirm}
-        />
-      )}
+      {/* intermediate-step canvases: kept in the DOM as draw targets for the
+          pipeline, but never shown to the user */}
+      <div hidden>
+        <canvas ref={processing.kmeansCanvasRef} />
+        <canvas ref={processing.reductionCanvasRef} />
+        <canvas ref={processing.borderPathCanvasRef} />
+        <canvas ref={processing.borderSegmentationCanvasRef} />
+        <canvas ref={processing.labelPlacementCanvasRef} />
+      </div>
     </div>
   );
 }

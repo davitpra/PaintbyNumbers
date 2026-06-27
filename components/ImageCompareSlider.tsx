@@ -58,7 +58,12 @@ export default function ImageCompareSlider({
       onPointerUp={onPointerUp}
     >
       {/* base = processed, defines the rendered size */}
-      <img className={styles.baseImg} src={processedSrc} alt="" draggable={false} />
+      <img
+        className={styles.baseImg}
+        src={processedSrc}
+        alt=""
+        draggable={false}
+      />
       {/* overlay = original, clipped to the left of the divider */}
       <img
         className={styles.overlayImg}
@@ -68,7 +73,9 @@ export default function ImageCompareSlider({
         style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
       />
       {leftLabel && (
-        <span className={`${styles.label} ${styles.labelLeft}`}>{leftLabel}</span>
+        <span className={`${styles.label} ${styles.labelLeft}`}>
+          {leftLabel}
+        </span>
       )}
       {rightLabel && (
         <span className={`${styles.label} ${styles.labelRight}`}>

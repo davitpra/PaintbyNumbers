@@ -1,4 +1,4 @@
-import { OutputTab, ProcessPhase } from "@/lib/pbn/guiprocessmanager";
+import { ProcessPhase } from "@/lib/pbn/guiprocessmanager";
 import { PaperFormat } from "@/lib/pbn/svgExport";
 
 export const PAPER_LABELS: Record<PaperFormat, string> = {
@@ -31,15 +31,6 @@ export const PHASE_LABELS: Record<ProcessPhase | "svg", string> = {
   facetLabelPlacement: "Label placement",
   svg: "SVG generation",
 };
-
-export const OUTPUT_TABS: { key: OutputTab; label: string }[] = [
-  { key: "kmeans-pane", label: "Quantized image" },
-  { key: "reduction-pane", label: "Facet reduction" },
-  { key: "borderpath-pane", label: "Border tracing" },
-  { key: "bordersegmentation-pane", label: "Border segmentation" },
-  { key: "labelplacement-pane", label: "Label placement" },
-  { key: "output-pane", label: "Output" },
-];
 
 export type OverallStatus = {
   progress: number;

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   GUIProcessManager,
-  OutputTab,
   ProcessCallbacks,
   ProcessResult,
 } from "@/lib/pbn/guiprocessmanager";
@@ -49,7 +48,6 @@ export function useProcessing({
     fillOpacity,
   } = renderOptions;
 
-  const [outputTab, setOutputTab] = useState<OutputTab | "log">("output-pane");
   const [compareImgs, setCompareImgs] = useState<{
     original: string;
     processed: string;
@@ -209,7 +207,6 @@ export function useProcessing({
 
         setOverall({ progress: clamped, label, state: "active" });
       },
-      onSelectTab: (tab) => setOutputTab(tab),
       log,
     };
 
@@ -222,7 +219,6 @@ export function useProcessing({
       );
       setHasOutput(true);
       await updateOutput(false);
-      setOutputTab("output-pane");
       // auto-compute the mixing recipes guide for the new palette
       onComplete(processResultRef.current.colorsByIndex);
     } catch (e) {
@@ -266,7 +262,7 @@ export function useProcessing({
   // canvas and the freshly rendered output SVG. Runs whenever the output pane is
   // active (and re-runs when the SVG is regenerated via render options).
   useEffect(() => {
-    if (outputTab !== "output-pane" || !hasOutput) return;
+    if (!hasOutput) return;
     let cancelled = false;
     (async () => {
       // wait a tick so any in-flight SVG re-render has committed to the DOM
@@ -282,7 +278,6 @@ export function useProcessing({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    outputTab,
     hasOutput,
     sizeMultiplier,
     fillFacets,
@@ -303,8 +298,6 @@ export function useProcessing({
     svgContainerRef,
     processResultRef,
     // state
-    outputTab,
-    setOutputTab,
     compareImgs,
     overall,
     palette,
