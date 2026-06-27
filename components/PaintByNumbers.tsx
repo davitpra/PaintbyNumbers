@@ -36,11 +36,7 @@ const PAPER_LABELS: Record<PaperFormat, string> = {
   tabloid: "Tabloid",
 };
 
-const EXAMPLE_IMAGES: Record<string, string> = {
-  trivial: "https://i.imgur.com/o5CqO57.png",
-  small: "https://i.imgur.com/YgYLDGP.png",
-  medium: "https://i.imgur.com/nLeNgYbr.jpg",
-};
+const EXAMPLE_IMAGE = "/example.png";
 
 const PHASE_WEIGHTS: Record<ProcessPhase | "svg", number> = {
   kMeans: 0.25,
@@ -168,7 +164,6 @@ export default function PaintByNumbers() {
   } | null>(null);
 
   // ui state
-  const [inputTab, setInputTab] = useState<"input" | "options">("input");
   const [outputTab, setOutputTab] = useState<OutputTab | "log">("output-pane");
   const [overall, setOverall] = useState<OverallStatus>({
     progress: 0,
@@ -218,20 +213,17 @@ export default function PaintByNumbers() {
     ctx.drawImage(img, 0, 0);
   }, []);
 
-  const loadExample = useCallback(
-    (name: keyof typeof EXAMPLE_IMAGES) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => drawImageToInput(img);
-      img.onerror = () => log("Unable to load example image: " + name);
-      img.src = EXAMPLE_IMAGES[name];
-    },
-    [drawImageToInput, log],
-  );
+  const loadExample = useCallback(() => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => drawImageToInput(img);
+    img.onerror = () => log("Unable to load example image");
+    img.src = EXAMPLE_IMAGE;
+  }, [drawImageToInput, log]);
 
   // load a default example & wire up clipboard paste
   useEffect(() => {
-    loadExample("small");
+    loadExample();
 
     const onPaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -611,7 +603,9 @@ export default function PaintByNumbers() {
     if (cropModal) {
       // Append the on-screen mixing guide as extra page(s) when available.
       const guideNode =
-        recipes && palette.length > 0 ? guideRef.current ?? undefined : undefined;
+        recipes && palette.length > 0
+          ? (guideRef.current ?? undefined)
+          : undefined;
       void downloadPDFCropped(
         cropModal.src,
         crop,
@@ -637,60 +631,8 @@ export default function PaintByNumbers() {
         />
         ). Large images are very slow to process though.
       </p>
-      <p>
-        Example images:{" "}
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            loadExample("trivial");
-          }}
-        >
-          trivial
-        </a>{" "}
-        -{" "}
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            loadExample("small");
-          }}
-        >
-          small
-        </a>{" "}
-        -{" "}
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            loadExample("medium");
-          }}
-        >
-          medium
-        </a>
-      </p>
 
-      {/* input / options tabs */}
-      <div className={styles.tabs}>
-        <button
-          className={inputTab === "input" ? styles.tabActive : styles.tab}
-          onClick={() => setInputTab("input")}
-        >
-          Input
-        </button>
-        <button
-          className={inputTab === "options" ? styles.tabActive : styles.tab}
-          onClick={() => setInputTab("options")}
-        >
-          Options
-        </button>
-      </div>
-
-      <div hidden={inputTab !== "input"} className={styles.pane}>
-        <canvas ref={inputCanvasRef} className={styles.canvas} />
-      </div>
-
-      <div hidden={inputTab !== "options"} className={styles.pane}>
+      <div className={styles.pane}>
         <div className={styles.optionRow}>
           <span>Presets</span>
           {PRESETS.map((p) => (
@@ -883,6 +825,10 @@ export default function PaintByNumbers() {
             />
           </label>
         </div>
+      </div>
+
+      <div className={styles.pane}>
+        <canvas ref={inputCanvasRef} className={styles.canvas} />
       </div>
 
       <button
