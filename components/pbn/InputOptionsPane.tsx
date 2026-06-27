@@ -150,6 +150,34 @@ export default function InputOptionsPane({ opts }: { opts: InputOptions }) {
           </div>
         </div>
 
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>Always include in palette</span>
+          <label className={styles.toggle}>
+            <input
+              type="checkbox"
+              className={styles.toggleInput}
+              checked={opts.includeBlack}
+              onChange={(e) => opts.setIncludeBlack(e.target.checked)}
+            />
+            <span className={styles.toggleTrack} aria-hidden>
+              <span className={styles.toggleThumb} />
+            </span>
+            <span className={styles.toggleText}>Black</span>
+          </label>
+          <label className={styles.toggle}>
+            <input
+              type="checkbox"
+              className={styles.toggleInput}
+              checked={opts.includeWhite}
+              onChange={(e) => opts.setIncludeWhite(e.target.checked)}
+            />
+            <span className={styles.toggleTrack} aria-hidden>
+              <span className={styles.toggleThumb} />
+            </span>
+            <span className={styles.toggleText}>White</span>
+          </label>
+        </div>
+
         <label className={styles.field}>
           <span className={styles.fieldLabel}>Restrict clustering colors</span>
           <span className={styles.fieldSub}>

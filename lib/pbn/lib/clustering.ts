@@ -54,37 +54,48 @@ export class KMeans {
     public centroids: Vector[] = [];
     public currentDeltaDistanceDifference: number = 0;
 
-    constructor(private points: Vector[], public k: number, private random:Random, centroids: Vector[] | null = null) {
+    // The first `nrOfFixedCentroids` centroids are pinned: they take part in
+    // point assignment but are never moved during step(). This is used to force
+    // specific colors (e.g. pure black/white) into the resulting palette.
+    private nrOfFixedCentroids: number = 0;
 
-        if (centroids != null) {
-            this.centroids = centroids;
-            for (let i: number = 0; i < this.k; i++) {
-                this.pointsPerCategory.push([]);
-            }
-        } else {
-            this.initCentroids();
-        }
+    constructor(private points: Vector[], public k: number, private random:Random, fixedCentroids: Vector[] = []) {
+        this.nrOfFixedCentroids = Math.min(fixedCentroids.length, k);
+        this.initCentroids(fixedCentroids.slice(0, this.nrOfFixedCentroids));
     }
 
-    private initCentroids() {
+    private initCentroids(fixedCentroids: Vector[]) {
         // k-means++: spread the initial centroids out by sampling each next
         // centroid with probability proportional to weight * D², where D is the
         // distance to the nearest already chosen centroid. Deterministic via the
         // injected seeded Random. Points are unique colors weighted by pixel
         // frequency, so the weighting avoids over-favoring rare noise colors.
-        this.centroids.push(this.points[Math.floor(this.points.length * this.random.next())]);
-        this.pointsPerCategory.push([]);
-
         const minDistSq: number[] = new Array(this.points.length).fill(Number.MAX_VALUE);
 
-        for (let c: number = 1; c < this.k; c++) {
-            const lastCentroid = this.centroids[this.centroids.length - 1];
-
-            let total = 0;
+        const addCentroid = (centroid: Vector) => {
+            this.centroids.push(centroid);
+            this.pointsPerCategory.push([]);
+            // refresh each point's distance to the nearest centroid chosen so far
             for (let i: number = 0; i < this.points.length; i++) {
-                const d = this.points[i].distanceTo(lastCentroid);
+                const d = this.points[i].distanceTo(centroid);
                 const dsq = d * d;
                 if (dsq < minDistSq[i]) { minDistSq[i] = dsq; }
+            }
+        };
+
+        // seed the pinned centroids (forced palette colors) first
+        for (const fc of fixedCentroids) {
+            addCentroid(fc);
+        }
+
+        // if nothing is pinned, pick the first centroid at random as before
+        if (this.centroids.length === 0) {
+            addCentroid(this.points[Math.floor(this.points.length * this.random.next())]);
+        }
+
+        for (let c: number = this.centroids.length; c < this.k; c++) {
+            let total = 0;
+            for (let i: number = 0; i < this.points.length; i++) {
                 total += this.points[i].weight * minDistSq[i];
             }
 
@@ -103,8 +114,7 @@ export class KMeans {
                     }
                 }
             }
-            this.centroids.push(this.points[chosen]);
-            this.pointsPerCategory.push([]);
+            addCentroid(this.points[chosen]);
         }
     }
 
@@ -131,8 +141,8 @@ export class KMeans {
 
         let totalDistanceDiff = 0;
 
-        // adjust centroids
-        for (let k: number = 0; k < this.pointsPerCategory.length; k++) {
+        // adjust centroids (pinned centroids stay fixed in place)
+        for (let k: number = this.nrOfFixedCentroids; k < this.pointsPerCategory.length; k++) {
             const cat = this.pointsPerCategory[k];
             if (cat.length > 0) {
                 const avg = Vector.average(cat);

@@ -114,9 +114,28 @@ export class ColorReducer {
             vectors[vIdx++] = vec;
         }
 
+        // build pinned centroids for the colors that must always be in the palette
+        // (e.g. black/white), converted into the active clustering color space
+        const fixedCentroids: Vector[] = [];
+        for (const rgb of settings.kMeansFixedColors) {
+            let data: number[];
+            if (settings.kMeansClusteringColorSpace === ClusteringColorSpace.RGB) {
+                data = rgb;
+            } else if (settings.kMeansClusteringColorSpace === ClusteringColorSpace.HSL) {
+                data = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+            } else if (settings.kMeansClusteringColorSpace === ClusteringColorSpace.LAB) {
+                data = rgb2lab(rgb);
+            } else {
+                data = rgb;
+            }
+            const vec = new Vector(data);
+            vec.tag = rgb;
+            fixedCentroids.push(vec);
+        }
+
         const random = new Random(settings.randomSeed === 0 ? new Date().getTime() : settings.randomSeed);
         // vectors of all the unique colors are built, time to cluster them
-        const kmeans = new KMeans(vectors, settings.kMeansNrOfClusters, random);
+        const kmeans = new KMeans(vectors, settings.kMeansNrOfClusters, random, fixedCentroids);
 
         let curTime = new Date().getTime();
 

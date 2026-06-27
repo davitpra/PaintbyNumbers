@@ -13,6 +13,12 @@ export class Settings {
 
     public kMeansColorRestrictions: Array<RGB | string> = [];
 
+    // Colors that must always appear in the palette (e.g. pure black/white).
+    // Unlike kMeansColorRestrictions (which snaps every centroid to the nearest
+    // allowed color), these are added as extra pinned clusters: pixels close to
+    // them collapse to the exact color while the rest are clustered normally.
+    public kMeansFixedColors: RGB[] = [];
+
     public colorAliases: { [key: string]: RGB } = {};
 
     public narrowPixelStripCleanupRuns: number = 3; // 3 seems like a good compromise between removing enough narrow pixel strips to convergence. This fixes e.g. https://i.imgur.com/dz4ANz1.png
