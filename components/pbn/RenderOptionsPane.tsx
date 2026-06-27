@@ -5,13 +5,11 @@ import styles from "../PaintByNumbers.module.css";
 interface RenderOptionsPaneProps {
   opts: RenderOptions;
   palette: RGB[];
-  svgContainerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export default function RenderOptionsPane({
   opts,
   palette,
-  svgContainerRef,
 }: RenderOptionsPaneProps) {
   return (
     <>
@@ -100,7 +98,6 @@ export default function RenderOptionsPane({
           </div>
         ))}
       </div>
-      <div ref={svgContainerRef} className={styles.svgContainer} />
     </>
   );
 }

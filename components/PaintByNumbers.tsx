@@ -180,13 +180,22 @@ export default function PaintByNumbers() {
             )}
           </div>
 
-          <div className={styles.zoomBar}>
-            <RenderOptionsPane
-              opts={renderOptions}
-              palette={processing.palette}
-              svgContainerRef={processing.svgContainerRef}
-            />
-          </div>
+          {processing.compareImgs && !processing.isProcessing && (
+            <div className={styles.zoomBar}>
+              <RenderOptionsPane
+                opts={renderOptions}
+                palette={processing.palette}
+              />
+            </div>
+          )}
+
+          {/* keep the SVG container mounted (the pipeline writes into it) but
+              hide it until the image has finished processing */}
+          <div
+            ref={processing.svgContainerRef}
+            className={styles.svgContainer}
+            hidden={!processing.compareImgs || processing.isProcessing}
+          />
 
           <section className={styles.paletteSection}>
             <strong>Color Palette</strong>
