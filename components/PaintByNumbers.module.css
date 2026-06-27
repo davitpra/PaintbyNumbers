@@ -624,16 +624,17 @@
   line-height: 1;
 }
 
+/* Render target / source for the compare slider and exports. Kept in the DOM
+   so the SVG can be read from it, but hidden so only the ImageCompareSlider is
+   shown to the user. */
 .svgContainer {
-  margin: 16px 0;
-  overflow: auto;
-  border: 1px solid var(--border);
-  background: #fff;
-}
-
-.svgContainer svg {
-  max-width: 100%;
-  height: auto;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .log {

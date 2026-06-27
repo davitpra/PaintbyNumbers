@@ -69,6 +69,13 @@ export default function PaintByNumbers() {
       </p>
 
       <InputOptionsPane opts={inputOptions} />
+      <button
+        className={styles.btn}
+        onClick={() => void processing.process()}
+        disabled={processing.isProcessing}
+      >
+        {processing.isProcessing ? "Processing..." : "Process image"}
+      </button>
 
       {processing.isProcessing && (
         <button className={styles.btnCancel} onClick={processing.cancel}>
@@ -124,14 +131,6 @@ export default function PaintByNumbers() {
 
         <ExportControls exp={exp} hasOutput={processing.hasOutput} />
       </div>
-
-      <button
-        className={styles.btn}
-        onClick={() => void processing.process()}
-        disabled={processing.isProcessing}
-      >
-        {processing.isProcessing ? "Processing..." : "Process image"}
-      </button>
 
       {/* intermediate-step canvases: kept in the DOM as draw targets for the
           pipeline, but never shown to the user */}
