@@ -33,9 +33,9 @@ export default function MixingGuide({
       <div className={styles.guideHead}>
         <div className={styles.guideHeader}>
           <div>
-            <h3 className={styles.guideTitle}>Guía de mezclas de colores</h3>
+            <h3 className={styles.guideTitle}>Color mixing guide</h3>
             <p className={styles.guideSubtitle}>
-              {recipes.length} colores y sus fórmulas para crearlos
+              {recipes.length} colors and the formulas to create them
             </p>
           </div>
         </div>
@@ -50,8 +50,8 @@ export default function MixingGuide({
                 title={`${p.nameEn} — nº ${p.codigo} (${p.pigmento}) — ${p.rgb[0]},${p.rgb[1]},${p.rgb[2]}`}
               />
               <span className={styles.basePaintName}>
-                {p.nameEs}
-                <span className={styles.basePaintCode}>nº {p.codigo}</span>
+                {p.nameEn}
+                <span className={styles.basePaintCode}>no. {p.codigo}</span>
               </span>
             </div>
           ))}
@@ -62,10 +62,10 @@ export default function MixingGuide({
           <thead>
             <tr>
               <th className={styles.guideColNum}>#</th>
-              <th className={styles.guideColPreview}>Vista previa</th>
+              <th className={styles.guideColPreview}>Preview</th>
               <th>
-                Fórmula de mezcla
-                <span className={styles.guideColHint}>(suma de partes)</span>
+                Mixing formula
+                <span className={styles.guideColHint}>(sum of parts)</span>
               </th>
             </tr>
           </thead>
@@ -82,7 +82,7 @@ export default function MixingGuide({
                         style={{
                           backgroundColor: `rgb(${m[0]},${m[1]},${m[2]})`,
                         }}
-                        title={`Mezcla: ${m[0]},${m[1]},${m[2]}`}
+                        title={`Mix: ${m[0]},${m[1]},${m[2]}`}
                       />
                       <span className={styles.guideEquals}>=</span>
                     </div>
@@ -101,10 +101,10 @@ export default function MixingGuide({
                             />
                             <div className={styles.guideCompInfo}>
                               <span className={styles.guidePct}>
-                                {e.parts} {e.parts === 1 ? "parte" : "partes"}
+                                {e.parts} {e.parts === 1 ? "part" : "parts"}
                               </span>
                               <span className={styles.guideCompName}>
-                                {e.paint.nameEs}
+                                {e.paint.nameEn}
                               </span>
                             </div>
                           </span>

@@ -1,10 +1,14 @@
 import { RGB } from "@/lib/pbn/common";
+import type { MixRecipe } from "@/lib/pbn/paintMixing";
 import { RenderOptions } from "./useRenderOptions";
 import styles from "../PaintByNumbers.module.css";
 
 interface RenderOptionsPaneProps {
   opts: RenderOptions;
   palette: RGB[];
+  recipes: MixRecipe[] | null;
+  showGuide: boolean;
+  onToggleGuide: () => void;
 }
 
 /** Native <input type="color"> only accepts #rrggbb, so expand shorthand
@@ -21,6 +25,9 @@ function toColorInputValue(value: string): string {
 export default function RenderOptionsPane({
   opts,
   palette,
+  recipes,
+  showGuide,
+  onToggleGuide,
 }: RenderOptionsPaneProps) {
   const toggles: {
     label: string;
@@ -154,6 +161,21 @@ export default function RenderOptionsPane({
           ))}
         </div>
       </div>
+      {recipes && palette.length > 0 && (
+        <div>
+          <button
+            type="button"
+            className={styles.guideToggle}
+            onClick={onToggleGuide}
+            aria-expanded={showGuide}
+          >
+            <span className={styles.guideToggleChevron}>
+              {showGuide ? "▾" : "▸"}
+            </span>
+            See mixing guide ({recipes.length} colors)
+          </button>
+        </div>
+      )}
     </section>
   );
 }

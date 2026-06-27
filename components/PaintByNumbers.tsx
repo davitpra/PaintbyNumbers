@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RGB } from "@/lib/pbn/common";
 import { getPaperAspect } from "@/lib/pbn/svgExport";
 import CropModal from "./CropModal";
@@ -27,6 +27,17 @@ export default function PaintByNumbers() {
   const renderOptions = useRenderOptions();
   const mixing = usePaintMixing();
   const guideRef = useRef<HTMLDivElement>(null);
+  const [showGuide, setShowGuide] = useState(false);
+
+  // Close the mixing-guide modal with Escape.
+  useEffect(() => {
+    if (!showGuide) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowGuide(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showGuide]);
 
   const { setRecipes, computeRecipes } = mixing;
   const onProcessStart = useCallback(() => setRecipes(null), [setRecipes]);
@@ -175,6 +186,9 @@ export default function PaintByNumbers() {
             <RenderOptionsPane
               opts={renderOptions}
               palette={processing.palette}
+              recipes={mixing.recipes}
+              showGuide={showGuide}
+              onToggleGuide={() => setShowGuide((v) => !v)}
             />
           )}
 
@@ -185,12 +199,46 @@ export default function PaintByNumbers() {
             className={styles.svgContainer}
             hidden={!processing.compareImgs || processing.isProcessing}
           />
+          {/* The mixing guide opens in a modal when toggled. When closed it
+              stays mounted off-screen so PNG/PDF export can still capture it. */}
+          {showGuide ? (
+            <div
+              className={styles.modalBackdrop}
+              onClick={() => setShowGuide(false)}
+            >
+              <div
+                className={`${styles.modal} ${styles.guideModal}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.modalHeader}>
+                  <span> </span>
+                  <button
+                    className={styles.modalClose}
+                    onClick={() => setShowGuide(false)}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className={styles.guideModalBody}>
+                  <MixingGuide
+                    recipes={mixing.recipes}
+                    palette={processing.palette}
+                    guideRef={guideRef}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.guideOffscreen} aria-hidden>
+              <MixingGuide
+                recipes={mixing.recipes}
+                palette={processing.palette}
+                guideRef={guideRef}
+              />
+            </div>
+          )}
 
-          <MixingGuide
-            recipes={mixing.recipes}
-            palette={processing.palette}
-            guideRef={guideRef}
-          />
           <section className={styles.stepCard}>
             <h3 className={styles.stepTitle}>
               <span className={styles.stepNum}>3</span>
