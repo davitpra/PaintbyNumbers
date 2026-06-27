@@ -55,43 +55,118 @@ export default function PaintByNumbers() {
   });
 
   return (
-    <div className={styles.container}>
-      <h2>Paint by number generator</h2>
-      <p>
-        Paste from clipboard (ctrl+v) to change the image (or browse for a file{" "}
-        <input
-          ref={input.fileInputRef}
-          type="file"
-          accept="image/x-png,image/gif,image/jpeg"
-          onChange={input.onFileChange}
-        />
-        ). Large images are very slow to process though.
-      </p>
+    <div className={styles.page}>
+      <header className={styles.pageHeader}>
+        <h2>Paint by number generator</h2>
+        <p>
+          Paste from clipboard (ctrl+v) to change the image, or browse for a
+          file in the upload step. Large images are very slow to process though.
+        </p>
+      </header>
 
-      <InputOptionsPane opts={inputOptions} />
-      <button
-        className={styles.btn}
-        onClick={() => void processing.process()}
-        disabled={processing.isProcessing}
-      >
-        {processing.isProcessing ? "Processing..." : "Process image"}
-      </button>
+      <div className={styles.layout}>
+        {/* ---- Sidebar: numbered step cards ---- */}
+        <aside className={styles.sidebar}>
+          {/* Step 1: Upload your image */}
+          <section className={styles.stepCard}>
+            <h3 className={styles.stepTitle}>
+              <span className={styles.stepNum}>1</span>
+              Upload your image
+            </h3>
+            <p className={styles.stepHint}>
+              Upload a clear photo with good lighting.
+            </p>
+            <input
+              ref={input.fileInputRef}
+              type="file"
+              accept="image/x-png,image/gif,image/jpeg"
+              onChange={input.onFileChange}
+            />
+            {"Place holder for drag-and-drop area"}
+          </section>
 
-      {processing.isProcessing && (
-        <button className={styles.btnCancel} onClick={processing.cancel}>
-          Cancel
-        </button>
-      )}
+          {/* Step 2: Image settings */}
+          <section className={styles.stepCard}>
+            <h3 className={styles.stepTitle}>
+              <span className={styles.stepNum}>2</span>
+              Image settings
+            </h3>
+            <InputOptionsPane opts={inputOptions} />
+          </section>
 
-      <ProgressBar overall={processing.overall} />
+          {/* Step 3: Output settings */}
+          <section className={styles.stepCard}>
+            <h3 className={styles.stepTitle}>
+              <span className={styles.stepNum}>3</span>
+              Output settings
+            </h3>
+            <RenderOptionsPane
+              opts={renderOptions}
+              palette={processing.palette}
+              svgContainerRef={processing.svgContainerRef}
+            />
+          </section>
 
-      <div className={styles.pane}>
-        <div className={styles.canvasWrap}>
-          <canvas ref={input.inputCanvasRef} className={styles.canvas} />
-          {processing.isProcessing && (
-            <div className={styles.processingOverlay} />
-          )}
-        </div>
+          {/* Step 4: Preview & download */}
+          <section className={styles.stepCard}>
+            <h3 className={styles.stepTitle}>
+              <span className={styles.stepNum}>4</span>
+              Preview &amp; download
+            </h3>
+            <button
+              className={styles.btn}
+              onClick={() => void processing.process()}
+              disabled={processing.isProcessing}
+            >
+              {processing.isProcessing ? "Processing..." : "Process image"}
+            </button>
+            {processing.isProcessing && (
+              <button className={styles.btnCancel} onClick={processing.cancel}>
+                Cancel
+              </button>
+            )}
+            <ProgressBar overall={processing.overall} />
+            <ExportControls exp={exp} hasOutput={processing.hasOutput} />
+          </section>
+        </aside>
+
+        {/* ---- Main: preview area ---- */}
+        <main className={styles.main}>
+          <div className={styles.previewBar}>
+            <strong>Preview</strong>
+          </div>
+
+          <div className={styles.previewArea}>
+            <div className={styles.canvasWrap}>
+              <canvas ref={input.inputCanvasRef} className={styles.canvas} />
+              {processing.isProcessing && (
+                <div className={styles.processingOverlay} />
+              )}
+            </div>
+            {processing.compareImgs && (
+              <ImageCompareSlider
+                originalSrc={processing.compareImgs.original}
+                processedSrc={processing.compareImgs.processed}
+                leftLabel="Original"
+                rightLabel="Resultado"
+              />
+            )}
+          </div>
+
+          <div className={styles.zoomBar}>
+            <span>100%</span>
+          </div>
+
+          <section className={styles.paletteSection}>
+            <strong>Color Palette</strong>
+          </section>
+
+          <MixingGuide
+            recipes={mixing.recipes}
+            palette={processing.palette}
+            guideRef={guideRef}
+          />
+        </main>
       </div>
 
       {exp.cropModal && (
@@ -105,32 +180,6 @@ export default function PaintByNumbers() {
           onConfirm={exp.handleCropConfirm}
         />
       )}
-
-      {/* output pane */}
-      <div className={styles.pane}>
-        <RenderOptionsPane
-          opts={renderOptions}
-          palette={processing.palette}
-          svgContainerRef={processing.svgContainerRef}
-        />
-
-        {processing.compareImgs && (
-          <ImageCompareSlider
-            originalSrc={processing.compareImgs.original}
-            processedSrc={processing.compareImgs.processed}
-            leftLabel="Original"
-            rightLabel="Resultado"
-          />
-        )}
-
-        <MixingGuide
-          recipes={mixing.recipes}
-          palette={processing.palette}
-          guideRef={guideRef}
-        />
-
-        <ExportControls exp={exp} hasOutput={processing.hasOutput} />
-      </div>
 
       {/* intermediate-step canvases: kept in the DOM as draw targets for the
           pipeline, but never shown to the user */}
