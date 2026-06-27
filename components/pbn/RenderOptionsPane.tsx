@@ -7,44 +7,75 @@ interface RenderOptionsPaneProps {
   palette: RGB[];
 }
 
+/** Native <input type="color"> only accepts #rrggbb, so expand shorthand
+ * (#rgb) and fall back to black for anything it can't parse. */
+function toColorInputValue(value: string): string {
+  const hex = value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) return hex;
+  if (/^#[0-9a-fA-F]{3}$/.test(hex)) {
+    return `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+  }
+  return "#000000";
+}
+
 export default function RenderOptionsPane({
   opts,
   palette,
 }: RenderOptionsPaneProps) {
+  const toggles: {
+    label: string;
+    checked: boolean;
+    onChange: (v: boolean) => void;
+  }[] = [
+    {
+      label: "Show labels",
+      checked: opts.showLabels,
+      onChange: opts.setShowLabels,
+    },
+    {
+      label: "Fill facets",
+      checked: opts.fillFacets,
+      onChange: opts.setFillFacets,
+    },
+    {
+      label: "Show borders",
+      checked: opts.showBorders,
+      onChange: opts.setShowBorders,
+    },
+  ];
+
   return (
-    <>
-      <div className={styles.optionRow}>
-        <span>SVG Render options</span>
-        <label className={styles.checkboxLabel}>
-          <input
-            type="checkbox"
-            checked={opts.showLabels}
-            onChange={(e) => opts.setShowLabels(e.target.checked)}
-          />
-          Show labels
-        </label>
-        <label className={styles.checkboxLabel}>
-          <input
-            type="checkbox"
-            checked={opts.fillFacets}
-            onChange={(e) => opts.setFillFacets(e.target.checked)}
-          />
-          Fill facets
-        </label>
-        <label className={styles.checkboxLabel}>
-          <input
-            type="checkbox"
-            checked={opts.showBorders}
-            onChange={(e) => opts.setShowBorders(e.target.checked)}
-          />
-          Show borders
-        </label>
+    <section className={styles.renderCard}>
+      <header className={styles.renderHeader}>
+        <h4 className={styles.renderTitle}>Render options</h4>
+        <p className={styles.renderHint}>
+          Tweak the SVG output — changes apply without reprocessing.
+        </p>
+      </header>
+
+      <div className={styles.toggleGroup}>
+        {toggles.map((t) => (
+          <label key={t.label} className={styles.toggle}>
+            <input
+              type="checkbox"
+              className={styles.toggleInput}
+              checked={t.checked}
+              onChange={(e) => t.onChange(e.target.checked)}
+            />
+            <span className={styles.toggleTrack} aria-hidden>
+              <span className={styles.toggleThumb} />
+            </span>
+            <span className={styles.toggleText}>{t.label}</span>
+          </label>
+        ))}
       </div>
-      <div className={styles.optionRow}>
-        <label>
-          SVG size multiplier
+
+      <div className={styles.fieldGrid}>
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>SVG size multiplier</span>
           <input
             type="number"
+            className={styles.fieldInput}
             min={1}
             value={opts.sizeMultiplier}
             onChange={(e) =>
@@ -52,10 +83,12 @@ export default function RenderOptionsPane({
             }
           />
         </label>
-        <label>
-          Label size
+
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Label size</span>
           <input
             type="number"
+            className={styles.fieldInput}
             min={1}
             max={40}
             value={opts.labelFontSize}
@@ -64,18 +97,35 @@ export default function RenderOptionsPane({
             }
           />
         </label>
-        <label>
-          Label font color
-          <input
-            type="text"
-            value={opts.labelFontColor}
-            onChange={(e) => opts.setLabelFontColor(e.target.value)}
-          />
+
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>Label color</span>
+          <div className={styles.colorField}>
+            <input
+              type="color"
+              className={styles.colorSwatch}
+              value={toColorInputValue(opts.labelFontColor)}
+              onChange={(e) => opts.setLabelFontColor(e.target.value)}
+            />
+            <input
+              type="text"
+              className={styles.fieldInput}
+              value={opts.labelFontColor}
+              onChange={(e) => opts.setLabelFontColor(e.target.value)}
+            />
+          </div>
         </label>
-        <label>
-          Fill opacity ({Math.round(opts.fillOpacity * 100)}%)
+
+        <label className={styles.field}>
+          <span className={styles.fieldLabel}>
+            Fill opacity
+            <span className={styles.fieldValue}>
+              {Math.round(opts.fillOpacity * 100)}%
+            </span>
+          </span>
           <input
             type="range"
+            className={styles.range}
             min={0}
             max={100}
             value={Math.round(opts.fillOpacity * 100)}
@@ -86,18 +136,24 @@ export default function RenderOptionsPane({
         </label>
       </div>
 
-      <div className={styles.palette}>
-        {palette.map((c, i) => (
-          <div
-            key={i}
-            className={styles.color}
-            style={{ backgroundColor: `rgb(${c[0]},${c[1]},${c[2]})` }}
-            title={`${c[0]},${c[1]},${c[2]}`}
-          >
-            {i}
-          </div>
-        ))}
+      <div className={styles.paletteBlock}>
+        <div className={styles.paletteHead}>
+          <strong>Color palette</strong>
+          <span className={styles.paletteCount}>{palette.length} colors</span>
+        </div>
+        <div className={styles.palette}>
+          {palette.map((c, i) => (
+            <div
+              key={i}
+              className={styles.color}
+              style={{ backgroundColor: `rgb(${c[0]},${c[1]},${c[2]})` }}
+              title={`#${i} · rgb(${c[0]}, ${c[1]}, ${c[2]})`}
+            >
+              {i + 1}
+            </div>
+          ))}
+        </div>
       </div>
-    </>
+    </section>
   );
 }

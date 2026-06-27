@@ -127,15 +127,6 @@ export default function PaintByNumbers() {
             </h3>
             <InputOptionsPane opts={inputOptions} />
           </section>
-
-          {/* Step 3: Preview & download */}
-          <section className={styles.stepCard}>
-            <h3 className={styles.stepTitle}>
-              <span className={styles.stepNum}>3</span>
-              Preview &amp; download
-            </h3>
-            <ExportControls exp={exp} hasOutput={processing.hasOutput} />
-          </section>
         </aside>
 
         {/* ---- Main: preview area ---- */}
@@ -181,12 +172,10 @@ export default function PaintByNumbers() {
           </div>
 
           {processing.compareImgs && !processing.isProcessing && (
-            <div className={styles.zoomBar}>
-              <RenderOptionsPane
-                opts={renderOptions}
-                palette={processing.palette}
-              />
-            </div>
+            <RenderOptionsPane
+              opts={renderOptions}
+              palette={processing.palette}
+            />
           )}
 
           {/* keep the SVG container mounted (the pipeline writes into it) but
@@ -197,15 +186,18 @@ export default function PaintByNumbers() {
             hidden={!processing.compareImgs || processing.isProcessing}
           />
 
-          <section className={styles.paletteSection}>
-            <strong>Color Palette</strong>
-          </section>
-
           <MixingGuide
             recipes={mixing.recipes}
             palette={processing.palette}
             guideRef={guideRef}
           />
+          <section className={styles.stepCard}>
+            <h3 className={styles.stepTitle}>
+              <span className={styles.stepNum}>3</span>
+              Preview &amp; download
+            </h3>
+            <ExportControls exp={exp} hasOutput={processing.hasOutput} />
+          </section>
         </main>
       </div>
 
