@@ -231,7 +231,7 @@
 }
 
 .canvas {
-  max-width: 100%;
+  width: 100%;
   height: auto;
   border: 1px solid var(--border);
   background: #fff;
@@ -240,9 +240,13 @@
 /* processing animation: a shimmer sweep across the image while it's processed */
 .canvasWrap {
   position: relative;
-  display: inline-block;
-  max-width: 100%;
+  display: block;
+  width: 100%;
   line-height: 0;
+}
+
+.canvasWrap[hidden] {
+  display: none;
 }
 
 .processingOverlay {

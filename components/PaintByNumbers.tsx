@@ -159,13 +159,18 @@ export default function PaintByNumbers() {
           <ProgressBar overall={processing.overall} />
 
           <div className={styles.previewArea}>
-            <div className={styles.canvasWrap}>
+            {/* keep the canvas mounted (the pipeline writes to it) but hide it
+                once the comparison slider is available */}
+            <div
+              className={styles.canvasWrap}
+              hidden={!!processing.compareImgs && !processing.isProcessing}
+            >
               <canvas ref={input.inputCanvasRef} className={styles.canvas} />
               {processing.isProcessing && (
                 <div className={styles.processingOverlay} />
               )}
             </div>
-            {processing.compareImgs && (
+            {processing.compareImgs && !processing.isProcessing && (
               <ImageCompareSlider
                 originalSrc={processing.compareImgs.original}
                 processedSrc={processing.compareImgs.processed}

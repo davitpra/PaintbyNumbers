@@ -60,6 +60,9 @@ export function useProcessing({
   const [palette, setPalette] = useState<RGB[]>([]);
   const [hasOutput, setHasOutput] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  // bumped after every successful process so the compare-slider images rebuild
+  // even when no render option changed (e.g. reprocessing with new image settings)
+  const [outputVersion, setOutputVersion] = useState(0);
 
   // canvases & refs
   const kmeansCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -219,6 +222,8 @@ export function useProcessing({
       );
       setHasOutput(true);
       await updateOutput(false);
+      // signal the compare-slider effect to rebuild even if no render option changed
+      setOutputVersion((v) => v + 1);
       // auto-compute the mixing recipes guide for the new palette
       onComplete(processResultRef.current.colorsByIndex);
     } catch (e) {
@@ -279,6 +284,7 @@ export function useProcessing({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     hasOutput,
+    outputVersion,
     sizeMultiplier,
     fillFacets,
     showBorders,
