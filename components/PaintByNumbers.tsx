@@ -25,6 +25,7 @@ import {
 import { downloadGuidePng, downloadPalettePng } from "@/lib/pbn/paletteExport";
 import { DEFAULT_BASE_PAINTS } from "@/lib/pbn/basePaints";
 import CropModal from "./CropModal";
+import ImageCompareSlider from "./ImageCompareSlider";
 import styles from "./PaintByNumbers.module.css";
 
 const PAPER_LABELS: Record<PaperFormat, string> = {
@@ -164,7 +165,13 @@ export default function PaintByNumbers() {
   } | null>(null);
 
   // ui state
-  const [outputTab, setOutputTab] = useState<OutputTab | "log">("output-pane");
+  const [outputTab, setOutputTab] = useState<OutputTab | "log">(
+    "output-pane"
+  );
+  const [compareImgs, setCompareImgs] = useState<{
+    original: string;
+    processed: string;
+  } | null>(null);
   const [overall, setOverall] = useState<OverallStatus>({
     progress: 0,
     label: "",
@@ -192,6 +199,10 @@ export default function PaintByNumbers() {
   const guideRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // pristine reference image, captured when loaded — the input canvas itself is
+  // overwritten in-place by the processing pipeline (k-means), so we keep the
+  // original here for the before/after comparator.
+  const originalImageRef = useRef<string | null>(null);
   const processResultRef = useRef<ProcessResult | null>(null);
   const cancellationTokenRef = useRef<CancellationToken>(
     new CancellationToken(),
@@ -211,6 +222,8 @@ export default function PaintByNumbers() {
     c.width = img.naturalWidth || img.width;
     c.height = img.naturalHeight || img.height;
     ctx.drawImage(img, 0, 0);
+    // snapshot the pristine image before any processing overwrites the canvas
+    originalImageRef.current = c.toDataURL();
   }, []);
 
   const loadExample = useCallback(() => {
@@ -527,6 +540,37 @@ export default function PaintByNumbers() {
     fillFacets,
     showBorders,
     sizeMultiplier,
+    labelFontSize,
+    labelFontColor,
+    fillOpacity,
+  ]);
+
+  // build the before/after images for the compare slider from the current input
+  // canvas and the freshly rendered output SVG. Runs whenever the output pane is
+  // active (and re-runs when the SVG is regenerated via render options).
+  useEffect(() => {
+    if (outputTab !== "output-pane" || !hasOutput) return;
+    let cancelled = false;
+    (async () => {
+      // wait a tick so any in-flight SVG re-render has committed to the DOM
+      await Promise.resolve();
+      const svg = svgContainerRef.current?.querySelector("svg");
+      const original = originalImageRef.current;
+      if (!svg || !original) return;
+      const { dataUrl: processed } = await svgToPngDataUrl(svg as SVGSVGElement);
+      if (!cancelled) setCompareImgs({ original, processed });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    outputTab,
+    hasOutput,
+    sizeMultiplier,
+    fillFacets,
+    showBorders,
+    showLabels,
     labelFontSize,
     labelFontColor,
     fillOpacity,
@@ -984,6 +1028,15 @@ export default function PaintByNumbers() {
           ))}
         </div>
         <div ref={svgContainerRef} className={styles.svgContainer} />
+
+        {compareImgs && (
+          <ImageCompareSlider
+            originalSrc={compareImgs.original}
+            processedSrc={compareImgs.processed}
+            leftLabel="Original"
+            rightLabel="Resultado"
+          />
+        )}
 
         {recipes &&
           palette.length > 0 &&
