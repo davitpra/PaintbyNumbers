@@ -26,7 +26,7 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 400px 1fr;
+  grid-template-columns: 450px 1fr;
   gap: 24px;
   align-items: start;
 }
@@ -547,6 +547,66 @@
   color: var(--primary-dark, var(--primary));
 }
 
+/* "?" help badge + hover/focus definition bubble */
+.helpTip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--background-secondary, #f5f5f5);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.helpTip:hover,
+.helpTip:focus-visible {
+  border-color: var(--primary);
+  color: var(--primary-dark, var(--primary));
+  outline: none;
+}
+
+.helpBubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #2a3744;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+  text-transform: none;
+  letter-spacing: 0;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+  pointer-events: none;
+}
+
+.helpTip:hover .helpBubble,
+.helpTip:focus-visible .helpBubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
 .fieldInput {
   width: 100%;
   padding: 7px 9px;
@@ -662,6 +722,33 @@
   text-transform: uppercase;
   letter-spacing: 0.6px;
   color: var(--muted);
+}
+
+.advancedToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.advancedToggle:hover {
+  color: var(--text);
+}
+
+.advancedChevron {
+  display: inline-block;
+  font-size: 10px;
+  line-height: 1;
 }
 
 .presetRow {

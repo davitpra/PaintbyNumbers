@@ -74,7 +74,7 @@ export const PRESETS: { key: string; label: string; apply: PresetValues }[] = [
   },
   {
     key: "detailed",
-    label: "Detailed (slow)",
+    label: "Slow (Detailed)",
     apply: {
       resizeWidth: 1280,
       resizeHeight: 1280,
