@@ -14,6 +14,7 @@
   display: block;
   width: 100%;
   height: auto;
+  -webkit-user-drag: none;
 }
 
 .overlayImg {
@@ -24,6 +25,16 @@
   height: 100%;
   object-fit: fill;
   pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Transparent layer above both images. Keeps pointer-events: auto so it
+   intercepts right-click / touch long-press; the pointerdown still bubbles to
+   .wrapper, so dragging the divider keeps working. */
+.guard {
+  position: absolute;
+  inset: 0;
+  -webkit-user-drag: none;
 }
 
 .handle {

@@ -56,6 +56,7 @@ export default function ImageCompareSlider({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onContextMenu={(e) => e.preventDefault()}
     >
       {/* base = processed, defines the rendered size */}
       <img
@@ -72,6 +73,10 @@ export default function ImageCompareSlider({
         draggable={false}
         style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
       />
+      {/* transparent guard: absorbs right-click / long-press so it lands on a
+          plain div instead of an <img> (no "Save image as"). Pointer events
+          still bubble to the wrapper, so the slider drag keeps working. */}
+      <div className={styles.guard} aria-hidden />
       {leftLabel && (
         <span className={`${styles.label} ${styles.labelLeft}`}>
           {leftLabel}
