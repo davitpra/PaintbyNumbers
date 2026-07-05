@@ -15,10 +15,11 @@ const sameColor = (a: RGB, b: RGB) =>
  * is currently active and building the `Settings` object the pipeline consumes.
  */
 export function useInputOptions() {
+  // Defaults match the "Fast" preset so it shows as active on first load.
   const [resizeImage, setResizeImage] = useState(true);
-  const [resizeWidth, setResizeWidth] = useState(1024);
-  const [resizeHeight, setResizeHeight] = useState(1024);
-  const [nrOfClusters, setNrOfClusters] = useState(16);
+  const [resizeWidth, setResizeWidth] = useState(600);
+  const [resizeHeight, setResizeHeight] = useState(600);
+  const [nrOfClusters, setNrOfClusters] = useState(12);
   const [clusterPrecision, setClusterPrecision] = useState(1);
   const [randomSeed, setRandomSeed] = useState(0);
   const [colorSpace, setColorSpace] = useState<ClusteringColorSpace>(
@@ -32,8 +33,8 @@ export function useInputOptions() {
   // how those colors drive the palette: "exact" = only these, "complement" =
   // these guaranteed plus automatic colors to fill up to nrOfClusters
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("complement");
-  const [narrowPixelCleanupRuns, setNarrowPixelCleanupRuns] = useState(3);
-  const [removeFacetsSmallerThan, setRemoveFacetsSmallerThan] = useState(20);
+  const [narrowPixelCleanupRuns, setNarrowPixelCleanupRuns] = useState(1);
+  const [removeFacetsSmallerThan, setRemoveFacetsSmallerThan] = useState(60);
   const [maximumNumberOfFacets, setMaximumNumberOfFacets] = useState(100000);
   const [largeToSmall, setLargeToSmall] = useState(true);
   const [halveBorderSegments, setHalveBorderSegments] = useState(2);

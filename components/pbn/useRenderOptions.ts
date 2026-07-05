@@ -5,23 +5,20 @@ export function useRenderOptions() {
   const [showLabels, setShowLabels] = useState(true);
   const [fillFacets, setFillFacets] = useState(true);
   const [showBorders, setShowBorders] = useState(true);
-  const [sizeMultiplier, setSizeMultiplier] = useState(3);
   const [labelFontSize, setLabelFontSize] = useState(12);
   const [labelFontColor, setLabelFontColor] = useState("#000");
-  const [fillOpacity, setFillOpacity] = useState(1);
+  const [fillOpacity, setFillOpacity] = useState(0.3);
 
   return {
     showLabels,
     fillFacets,
     showBorders,
-    sizeMultiplier,
     labelFontSize,
     labelFontColor,
     fillOpacity,
     setShowLabels,
     setFillFacets,
     setShowBorders,
-    setSizeMultiplier,
     setLabelFontSize,
     setLabelFontColor,
     setFillOpacity,

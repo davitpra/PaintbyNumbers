@@ -379,11 +379,11 @@ export class GUIProcessManager {
     /**
      *  Creates a vector based SVG image of the facets with the given configuration
      */
-    public static async createSVG(facetResult: FacetResult, colorsByIndex: RGB[], sizeMultiplier: number, fill: boolean, stroke: boolean, addColorLabels: boolean, fontSize: number = 50, fontColor: string = "black", fillOpacity: number = 1, onUpdate: ((progress: number) => void) | null = null) {
+    public static async createSVG(facetResult: FacetResult, colorsByIndex: RGB[], fill: boolean, stroke: boolean, addColorLabels: boolean, fontSize: number = 50, fontColor: string = "black", fillOpacity: number = 1, onUpdate: ((progress: number) => void) | null = null) {
         const xmlns = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(xmlns, "svg");
-        const svgWidth = sizeMultiplier * facetResult.width;
-        const svgHeight = sizeMultiplier * facetResult.height;
+        const svgWidth = facetResult.width;
+        const svgHeight = facetResult.height;
         svg.setAttribute("width", svgWidth + "");
         svg.setAttribute("height", svgHeight + "");
         // Without a viewBox the content is not scaled when CSS resizes the SVG box,
@@ -425,11 +425,11 @@ export class GUIProcessManager {
 
                 // Build path data (shared by fill and stroke paths)
                 let data = "M ";
-                data += newpath[0].x * sizeMultiplier + " " + newpath[0].y * sizeMultiplier + " ";
+                data += newpath[0].x + " " + newpath[0].y + " ";
                 for (let i: number = 1; i < newpath.length; i++) {
                     const midpointX = (newpath[i].x + newpath[i - 1].x) / 2;
                     const midpointY = (newpath[i].y + newpath[i - 1].y) / 2;
-                    data += "Q " + (midpointX * sizeMultiplier) + " " + (midpointY * sizeMultiplier) + " " + (newpath[i].x * sizeMultiplier) + " " + (newpath[i].y * sizeMultiplier) + " ";
+                    data += "Q " + midpointX + " " + midpointY + " " + newpath[i].x + " " + newpath[i].y + " ";
                 }
                 data += "Z";
 
@@ -451,7 +451,7 @@ export class GUIProcessManager {
                     strokePath.setAttribute("data-facetId", f.id + "");
                     strokePath.setAttribute("d", data);
                     strokePath.style.fill = "none";
-                    strokePath.style.strokeWidth = "1px";
+                    strokePath.style.strokeWidth = "0.33px";
                     if (stroke) {
                         strokePath.style.stroke = "#000";
                     } else {
@@ -485,8 +485,8 @@ export class GUIProcessManager {
                     const centerY = f.labelBounds.minY + f.labelBounds.height / 2;
 
                     const subsvg = document.createElementNS(xmlns, "svg");
-                    subsvg.setAttribute("width", boxW * sizeMultiplier + "");
-                    subsvg.setAttribute("height", boxH * sizeMultiplier + "");
+                    subsvg.setAttribute("width", boxW + "");
+                    subsvg.setAttribute("height", boxH + "");
                     subsvg.setAttribute("overflow", "visible");
                     subsvg.setAttribute("viewBox", "-50 -50 100 100");
                     subsvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
@@ -496,7 +496,7 @@ export class GUIProcessManager {
                     const g = document.createElementNS(xmlns, "g");
                     g.setAttribute("class", "label");
                     // Re-center the capped box within the facet's available room.
-                    g.setAttribute("transform", "translate(" + (centerX - boxW / 2) * sizeMultiplier + "," + (centerY - boxH / 2) * sizeMultiplier + ")");
+                    g.setAttribute("transform", "translate(" + (centerX - boxW / 2) + "," + (centerY - boxH / 2) + ")");
                     g.appendChild(subsvg);
                     svg.appendChild(g);
                 }

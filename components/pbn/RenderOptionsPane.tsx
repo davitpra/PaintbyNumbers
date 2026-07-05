@@ -66,18 +66,6 @@ export default function RenderOptionsPane({ opts }: RenderOptionsPaneProps) {
       </div>
 
       <div className={styles.fieldGrid}>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>SVG size multiplier</span>
-          <input
-            type="number"
-            className={styles.fieldInput}
-            min={1}
-            value={opts.sizeMultiplier}
-            onChange={(e) =>
-              opts.setSizeMultiplier(parseInt(e.target.value) || 1)
-            }
-          />
-        </label>
 
         <label className={styles.field}>
           <span className={styles.fieldLabel}>Label size</span>

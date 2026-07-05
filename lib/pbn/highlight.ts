@@ -6,8 +6,8 @@ import { FacetResult } from "./facetmanagement";
 const FADE_OPACITY = 0.1;
 
 /**
- * Builds a PNG data URL the size of the source image (facet coordinates, before
- * any sizeMultiplier) that spotlights one color's sections. Non-selected pixels
+ * Builds a PNG data URL the size of the source image (facet coordinates) that
+ * spotlights one color's sections. Non-selected pixels
  * are painted as their own palette color faded to {@link FADE_OPACITY} over
  * white (a ghost of the image), while the selected sections stay fully
  * transparent so their true color shows through at 100%.

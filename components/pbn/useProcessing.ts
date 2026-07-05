@@ -39,7 +39,6 @@ export function useProcessing({
   onComplete,
 }: UseProcessingArgs) {
   const {
-    sizeMultiplier,
     fillFacets,
     showBorders,
     showLabels,
@@ -106,7 +105,6 @@ export function useProcessing({
         svg = await GUIProcessManager.createSVG(
           result.facetResult,
           result.colorsByIndex,
-          sizeMultiplier,
           fillFacets,
           showBorders,
           showLabels,
@@ -149,7 +147,6 @@ export function useProcessing({
       setOutputVersion((v) => v + 1);
     },
     [
-      sizeMultiplier,
       fillFacets,
       showBorders,
       showLabels,
@@ -273,7 +270,6 @@ export function useProcessing({
     showLabels,
     fillFacets,
     showBorders,
-    sizeMultiplier,
     labelFontSize,
     labelFontColor,
     fillOpacity,
