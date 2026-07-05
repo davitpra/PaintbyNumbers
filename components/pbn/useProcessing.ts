@@ -78,6 +78,9 @@ export function useProcessing({
   );
   const overallProgressRef = useRef(0);
   const overallPctRef = useRef(-1);
+  // monotonic id per SVG render; a render only commits if it's still the latest,
+  // so overlapping updateOutput calls can't clobber each other's output
+  const svgGenerationRef = useRef(0);
   const phaseCompletedRunsRef = useRef<Record<string, number>>({});
 
   const cancel = useCallback(() => {
@@ -90,6 +93,7 @@ export function useProcessing({
       const container = svgContainerRef.current;
       if (!result || !container) return;
 
+      const generation = ++svgGenerationRef.current;
       const pipelineBase = standalone ? 0 : overallProgressRef.current;
       if (standalone) {
         overallProgressRef.current = 0;
@@ -97,39 +101,52 @@ export function useProcessing({
         setOverall({ progress: 0, label: "SVG generation", state: "active" });
       }
 
-      const svg = await GUIProcessManager.createSVG(
-        result.facetResult,
-        result.colorsByIndex,
-        sizeMultiplier,
-        fillFacets,
-        showBorders,
-        showLabels,
-        labelFontSize,
-        labelFontColor,
-        fillOpacity,
-        (svgProg) => {
-          if (cancellationTokenRef.current.isCancelled) {
-            throw new Error("Cancelled");
-          }
-          const p = standalone
-            ? svgProg
-            : pipelineBase + svgProg * PHASE_WEIGHTS.svg;
-          const pct = Math.floor(p * 100);
-          if (pct !== overallPctRef.current) {
-            overallPctRef.current = pct;
-            setOverall({
-              progress: p,
-              label: "SVG generation",
-              state: "active",
-            });
-          }
-        },
-      );
+      let svg: SVGSVGElement;
+      try {
+        svg = await GUIProcessManager.createSVG(
+          result.facetResult,
+          result.colorsByIndex,
+          sizeMultiplier,
+          fillFacets,
+          showBorders,
+          showLabels,
+          labelFontSize,
+          labelFontColor,
+          fillOpacity,
+          (svgProg) => {
+            if (generation !== svgGenerationRef.current) {
+              throw new Error("Superseded");
+            }
+            if (cancellationTokenRef.current.isCancelled) {
+              throw new Error("Cancelled");
+            }
+            const p = standalone
+              ? svgProg
+              : pipelineBase + svgProg * PHASE_WEIGHTS.svg;
+            const pct = Math.floor(p * 100);
+            if (pct !== overallPctRef.current) {
+              overallPctRef.current = pct;
+              setOverall({
+                progress: p,
+                label: "SVG generation",
+                state: "active",
+              });
+            }
+          },
+        );
+      } catch (e) {
+        // a newer render superseded this one; let it drive the output instead
+        if ((e as Error).message === "Superseded") return;
+        throw e;
+      }
 
+      if (generation !== svgGenerationRef.current) return;
       container.innerHTML = "";
       container.appendChild(svg);
       setPalette(result.colorsByIndex);
       setOverall({ progress: 1, label: "Done", state: "complete" });
+      // signal the compare-slider effect that a new SVG is in the DOM
+      setOutputVersion((v) => v + 1);
     },
     [
       sizeMultiplier,
@@ -221,9 +238,8 @@ export function useProcessing({
         callbacks,
       );
       setHasOutput(true);
+      // updateOutput bumps outputVersion so the compare-slider effect rebuilds
       await updateOutput(false);
-      // signal the compare-slider effect to rebuild even if no render option changed
-      setOutputVersion((v) => v + 1);
       // auto-compute the mixing recipes guide for the new palette
       onComplete(processResultRef.current.colorsByIndex);
     } catch (e) {
@@ -264,14 +280,13 @@ export function useProcessing({
   ]);
 
   // build the before/after images for the compare slider from the current input
-  // canvas and the freshly rendered output SVG. Runs whenever the output pane is
-  // active (and re-runs when the SVG is regenerated via render options).
+  // canvas and the freshly rendered output SVG. Keyed on outputVersion (bumped
+  // by updateOutput after the SVG commits to the DOM) rather than on the render
+  // options themselves, so it never snapshots a stale SVG mid-render.
   useEffect(() => {
     if (!hasOutput) return;
     let cancelled = false;
     (async () => {
-      // wait a tick so any in-flight SVG re-render has committed to the DOM
-      await Promise.resolve();
       const svg = svgContainerRef.current?.querySelector("svg");
       const original = originalImageRef.current;
       if (!svg || !original) return;
@@ -282,17 +297,7 @@ export function useProcessing({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    hasOutput,
-    outputVersion,
-    sizeMultiplier,
-    fillFacets,
-    showBorders,
-    showLabels,
-    labelFontSize,
-    labelFontColor,
-    fillOpacity,
-  ]);
+  }, [hasOutput, outputVersion]);
 
   return {
     // refs for the intermediate panes & output container
