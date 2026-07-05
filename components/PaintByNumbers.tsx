@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RGB } from "@/lib/pbn/common";
 import { getPaperAspect } from "@/lib/pbn/svgExport";
-import { buildHighlightMaskDataUrl } from "@/lib/pbn/highlight";
+import { buildHighlightOverlayDataUrl } from "@/lib/pbn/highlight";
 import CropModal from "./CropModal";
 import ImageCompareSlider from "./ImageCompareSlider";
 import { PAPER_LABELS } from "./pbn/constants";
@@ -65,18 +65,32 @@ export default function PaintByNumbers() {
     onComplete,
   });
 
-  // Rebuild the dimming mask whenever the spotlighted color changes. Keyed on
-  // palette too so it recomputes against the fresh facet result after a reprocess.
+  // Rebuild the spotlight overlay whenever the selected color changes. Keyed on
+  // palette so it recomputes against the fresh facet result after a reprocess,
+  // and on the render options so the overlay's borders/labels track the toggles.
   const highlightSrc = useMemo(() => {
     const result = processing.processResultRef.current;
     if (selectedColor === null || !result) return undefined;
-    return buildHighlightMaskDataUrl(
+    return buildHighlightOverlayDataUrl(
       result.facetResult,
       selectedColor,
       result.colorsByIndex,
+      {
+        showBorders: renderOptions.showBorders,
+        showLabels: renderOptions.showLabels,
+        fontSize: renderOptions.labelFontSize,
+        fontColor: renderOptions.labelFontColor,
+      },
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedColor, processing.palette]);
+  }, [
+    selectedColor,
+    processing.palette,
+    renderOptions.showBorders,
+    renderOptions.showLabels,
+    renderOptions.labelFontSize,
+    renderOptions.labelFontColor,
+  ]);
 
   const exp = useExport({
     svgContainerRef: processing.svgContainerRef,

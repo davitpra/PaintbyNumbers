@@ -4,11 +4,10 @@ Guía de implementación de la función que permite **resaltar en la imagen resu
 
 ## Resumen
 
-Cuando el usuario hace click en un color de la paleta (`ColorPalettePane`), la imagen resultado del comparador (`ImageCompareSlider`) se transforma así:
+Cuando el usuario hace click en un color de la paleta (`ColorPalettePane`), sobre la imagen resultado del comparador (`ImageCompareSlider`) se superpone un overlay que resalta ese color:
 
-- Las secciones del **color seleccionado** se ven a su **color real al 100%**.
-- El **resto de colores** se desvanece a un **fantasma al 10%** (cada zona conserva su propio matiz, no es un velo gris uniforme).
-- No se dibuja ningún contorno.
+- Las secciones del **color seleccionado** se pintan a su **color real al 100%**, con su **contorno** y su **número** redibujados encima para que sigan siendo legibles sobre el relleno opaco.
+- El **resto de la imagen queda intacto** (sus rellenos pálidos, bordes y números se ven igual que antes del click): esos facets simplemente no forman parte del overlay, así que la base se ve a través.
 
 Volver a hacer click en el mismo color quita el resaltado. Solo se afecta el lado **Result** del slider; el lado **Original** queda intacto.
 
@@ -28,56 +27,68 @@ Clave: el índice `i` del swatch en `ColorPalettePane` es exactamente `facet.col
 
 ## Archivos y cambios
 
-### 1. `lib/pbn/highlight.ts` (nuevo)
+### 1. `lib/pbn/highlight.ts`
 
-Helper puro que genera la máscara PNG (a resolución fuente) que se superpone a la imagen resultado.
+Genera un **overlay SVG** (a resolución fuente, mismo `viewBox` que la salida procesada) que contiene **solo** los facets del color elegido. Reutiliza los helpers `buildFacetPathData` y `buildFacetLabel` de `guiprocessmanager.ts` para que el contorno y el número coincidan exactamente con los de la imagen base.
 
 ```ts
 import { RGB } from "./common";
 import { FacetResult } from "./facetmanagement";
+import { buildFacetLabel, buildFacetPathData } from "./guiprocessmanager";
 
-// Opacidad que se conserva de los colores NO seleccionados (compuesta sobre
-// blanco). Todo lo que no es el color elegido se atenúa a un fantasma al 10%.
-const FADE_OPACITY = 0.1;
+const XMLNS = "http://www.w3.org/2000/svg";
 
-export function buildHighlightMaskDataUrl(
+export interface HighlightOverlayOptions {
+  showBorders: boolean;
+  showLabels: boolean;
+  fontSize: number;
+  fontColor: string;
+}
+
+export function buildHighlightOverlayDataUrl(
   facetResult: FacetResult,
   colorIndex: number,
   palette: RGB[],
+  opts: HighlightOverlayOptions,
 ): string {
-  const { width, height, facetMap, facets } = facetResult;
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return "";
+  const { width, height, facets } = facetResult;
+  const svg = document.createElementNS(XMLNS, "svg");
+  svg.setAttribute("width", width + "");
+  svg.setAttribute("height", height + "");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
-  const imageData = ctx.createImageData(width, height);
-  const data = imageData.data;
-  let i = 0;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const facet = facets[facetMap.get(x, y)];
-      if (!facet || facet.color !== colorIndex) {
-        // no seleccionado → su propio color de paleta atenuado al 10% sobre blanco
-        const c = facet ? palette[facet.color] : [255, 255, 255];
-        data[i] = fade(c[0]);
-        data[i + 1] = fade(c[1]);
-        data[i + 2] = fade(c[2]);
-        data[i + 3] = 255;
-      }
-      // sección seleccionada → transparente (alpha queda en 0), se ve el color real
-      i += 4;
+  for (const f of facets) {
+    if (f == null || f.color !== colorIndex) continue;
+    const data = buildFacetPathData(f);
+    if (data == null) continue;
+
+    const c = palette[f.color];
+
+    // relleno sólido al 100% → el resaltado
+    const fillPath = document.createElementNS(XMLNS, "path");
+    fillPath.setAttribute("d", data);
+    fillPath.style.stroke = "none";
+    fillPath.style.fill = `rgb(${c[0]},${c[1]},${c[2]})`;
+    svg.appendChild(fillPath);
+
+    // el relleno taparía el borde de la base → redibujarlo
+    if (opts.showBorders) {
+      const strokePath = document.createElementNS(XMLNS, "path");
+      strokePath.setAttribute("d", data);
+      strokePath.style.fill = "none";
+      strokePath.style.strokeWidth = "0.33px";
+      strokePath.style.stroke = "#000";
+      svg.appendChild(strokePath);
+    }
+
+    // número legible sobre el color pleno
+    if (opts.showLabels) {
+      svg.appendChild(buildFacetLabel(f, opts.fontSize, opts.fontColor));
     }
   }
 
-  ctx.putImageData(imageData, 0, 0);
-  return canvas.toDataURL();
-}
-
-// Compone un canal sobre blanco a FADE_OPACITY.
-function fade(channel: number): number {
-  return Math.round(255 * (1 - FADE_OPACITY) + channel * FADE_OPACITY);
+  const serialized = new XMLSerializer().serializeToString(svg);
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(serialized);
 }
 ```
 
@@ -140,23 +151,37 @@ CSS (mismo patrón que `.overlayImg`):
 
 ### 4. `components/PaintByNumbers.tsx`
 
-Levanta el estado de selección y deriva la máscara.
+Levanta el estado de selección y deriva el overlay.
 
 ```tsx
 const [selectedColor, setSelectedColor] = useState<number | null>(null);
 
-// Reconstruye la máscara al cambiar el color o la paleta. Depende de palette
-// para recalcular contra el facetResult nuevo tras reprocesar.
+// Reconstruye el overlay al cambiar el color, la paleta o las render options.
+// Depende de palette para recalcular contra el facetResult nuevo tras reprocesar,
+// y de los toggles para que el borde/número del overlay los sigan.
 const highlightSrc = useMemo(() => {
   const result = processing.processResultRef.current;
   if (selectedColor === null || !result) return undefined;
-  return buildHighlightMaskDataUrl(
+  return buildHighlightOverlayDataUrl(
     result.facetResult,
     selectedColor,
     result.colorsByIndex,
+    {
+      showBorders: renderOptions.showBorders,
+      showLabels: renderOptions.showLabels,
+      fontSize: renderOptions.labelFontSize,
+      fontColor: renderOptions.labelFontColor,
+    },
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [selectedColor, processing.palette]);
+}, [
+  selectedColor,
+  processing.palette,
+  renderOptions.showBorders,
+  renderOptions.showLabels,
+  renderOptions.labelFontSize,
+  renderOptions.labelFontColor,
+]);
 ```
 
 - En `onProcessStart` se resetea la selección para no arrastrar un color de una paleta vieja:
@@ -193,16 +218,18 @@ Estilos de los swatches ahora que son botones:
 
 ## Detalles clave / gotchas
 
-- **"Bajar la opacidad" con un overlay**: el overlay va _encima_ de la imagen, así que no puede reducir la opacidad de lo de abajo. El equivalente exacto es pintar píxeles **opacos** con el color de paleta compuesto al 10% sobre blanco (`fade()`), y dejar **transparentes** solo las secciones seleccionadas.
-- **Resolución de la máscara**: se genera a `facetResult.width × height` (resolución fuente) y se escala vía CSS (`width:100%`). Es independiente de `sizeMultiplier`, así que sigue alineada aunque cambien las render options.
-- **Orden en el DOM del slider**: `highlightImg` debe ir entre `baseImg` y `overlayImg` para no oscurecer el lado Original.
-- **Coste**: `buildHighlightMaskDataUrl` es O(w×h), se ejecuta una sola vez por click (memoizado). Suficientemente rápido.
+- **Solo se añade lo seleccionado**: el overlay contiene únicamente los facets del color elegido; todo lo demás se deja fuera (transparente), así la imagen base se ve intacta con sus números. No hay que atenuar el resto.
+- **Redibujar borde y número**: el relleno del overlay es opaco y taparía el contorno/número de la base en esas secciones, por eso se vuelven a dibujar dentro del propio overlay (siguiendo los toggles `showBorders`/`showLabels`).
+- **Reutilizar helpers**: `buildFacetPathData` y `buildFacetLabel` viven en `guiprocessmanager.ts` y los comparten `createSVG` y el overlay, de modo que la geometría y el tamaño de los números coinciden exactamente.
+- **Resolución/alineación**: el SVG usa el mismo `width × height` y `viewBox` que la salida procesada y se escala vía CSS (`width:100%`), así queda alineado aunque cambien las render options.
+- **Orden en el DOM del slider**: `highlightImg` debe ir entre `baseImg` y `overlayImg` para no cubrir el lado Original.
+- **Coste**: `buildHighlightOverlayDataUrl` recorre los facets una vez y serializa un SVG (sin rasterizar), memoizado por click. Suficientemente rápido.
 
 ## Cómo probar
 
 1. `npm run dev` (si el puerto 3000 está ocupado, Next levanta en 3001).
 2. Cargar una imagen y **Process image** con pocos colores (p. ej. 6) para ver secciones grandes.
-3. Click en un swatch: sus secciones quedan a todo color y el resto en fantasma al 10%; el swatch muestra el anillo de selección y los demás se atenúan.
+3. Click en un swatch: sus secciones quedan a todo color (con contorno y número) y el resto de la imagen no cambia; el swatch muestra el anillo de selección y los demás se atenúan.
 4. Click de nuevo en el mismo swatch → se quita el resaltado. Click en otro → cambia.
-5. Arrastrar el divisor: el lado Original nunca se atenúa; el resaltado se mantiene alineado.
+5. Arrastrar el divisor: el lado Original nunca se ve afectado; el resaltado se mantiene alineado.
 6. Reprocesar (o cambiar settings + Process) → la selección se limpia y no queda overlay obsoleto.

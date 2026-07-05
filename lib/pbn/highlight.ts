@@ -1,53 +1,68 @@
 import { RGB } from "./common";
 import { FacetResult } from "./facetmanagement";
+import { buildFacetLabel, buildFacetPathData } from "./guiprocessmanager";
 
-// Opacity kept for non-selected sections (composited over white). Everything
-// except the chosen color fades to a 10% ghost so its hue is still readable.
-const FADE_OPACITY = 0.1;
+const XMLNS = "http://www.w3.org/2000/svg";
+
+export interface HighlightOverlayOptions {
+  showBorders: boolean;
+  showLabels: boolean;
+  fontSize: number;
+  fontColor: string;
+}
 
 /**
- * Builds a PNG data URL the size of the source image (facet coordinates) that
- * spotlights one color's sections. Non-selected pixels
- * are painted as their own palette color faded to {@link FADE_OPACITY} over
- * white (a ghost of the image), while the selected sections stay fully
- * transparent so their true color shows through at 100%.
+ * Builds an SVG data URL that spotlights one color's sections. It overlays only
+ * the facets of the chosen color, painted at their true palette color (100%),
+ * with the border and number redrawn on top so they stay visible over the solid
+ * fill. Every other facet is left out of the overlay (fully transparent), so the
+ * base image — and all its other numbers — shows through untouched.
+ *
+ * The SVG uses the same width/height/viewBox as the processed output, so it
+ * lines up when the compare slider scales it via CSS.
  */
-export function buildHighlightMaskDataUrl(
+export function buildHighlightOverlayDataUrl(
   facetResult: FacetResult,
   colorIndex: number,
   palette: RGB[],
+  opts: HighlightOverlayOptions,
 ): string {
-  const { width, height, facetMap, facets } = facetResult;
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return "";
+  const { width, height, facets } = facetResult;
+  const svg = document.createElementNS(XMLNS, "svg");
+  svg.setAttribute("width", width + "");
+  svg.setAttribute("height", height + "");
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
 
-  const imageData = ctx.createImageData(width, height);
-  const data = imageData.data;
-  let i = 0;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const facet = facets[facetMap.get(x, y)];
-      if (!facet || facet.color !== colorIndex) {
-        // non-selected → this pixel's palette color faded to 10% over white
-        const c = facet ? palette[facet.color] : [255, 255, 255];
-        data[i] = fade(c[0]);
-        data[i + 1] = fade(c[1]);
-        data[i + 2] = fade(c[2]);
-        data[i + 3] = 255;
-      }
-      // selected section → transparent, true color shows through (alpha stays 0)
-      i += 4;
+  for (const f of facets) {
+    if (f == null || f.color !== colorIndex) continue;
+    const data = buildFacetPathData(f);
+    if (data == null) continue;
+
+    const c = palette[f.color];
+
+    // Solid fill at 100% — this is the highlight.
+    const fillPath = document.createElementNS(XMLNS, "path");
+    fillPath.setAttribute("d", data);
+    fillPath.style.stroke = "none";
+    fillPath.style.fill = `rgb(${c[0]},${c[1]},${c[2]})`;
+    svg.appendChild(fillPath);
+
+    // The solid fill would cover the base image's border, so redraw it here.
+    if (opts.showBorders) {
+      const strokePath = document.createElementNS(XMLNS, "path");
+      strokePath.setAttribute("d", data);
+      strokePath.style.fill = "none";
+      strokePath.style.strokeWidth = "0.33px";
+      strokePath.style.stroke = "#000";
+      svg.appendChild(strokePath);
+    }
+
+    // Keep the number readable on top of the full-color fill.
+    if (opts.showLabels) {
+      svg.appendChild(buildFacetLabel(f, opts.fontSize, opts.fontColor));
     }
   }
 
-  ctx.putImageData(imageData, 0, 0);
-  return canvas.toDataURL();
-}
-
-/** Composite one channel over white at FADE_OPACITY. */
-function fade(channel: number): number {
-  return Math.round(255 * (1 - FADE_OPACITY) + channel * FADE_OPACITY);
+  const serialized = new XMLSerializer().serializeToString(svg);
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(serialized);
 }

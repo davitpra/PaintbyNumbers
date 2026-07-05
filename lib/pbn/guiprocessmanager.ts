@@ -13,10 +13,82 @@ import { FacetBorderSegmenter } from "./facetBorderSegmenter";
 import { FacetBorderTracer } from "./facetBorderTracer";
 import { FacetCreator } from "./facetCreator";
 import { FacetLabelPlacer } from "./facetLabelPlacer";
-import { FacetResult } from "./facetmanagement";
+import { Facet, FacetResult } from "./facetmanagement";
 import { FacetReducer } from "./facetReducer";
 import { Settings } from "./settings";
 import { Point } from "./structs/point";
+
+const SVG_XMLNS = "http://www.w3.org/2000/svg";
+
+/**
+ * Builds the SVG path `d` string for a facet's outline (quadratic curves through
+ * the border segment midpoints, loop closed). Returns null when the facet has no
+ * border segments to trace.
+ */
+export function buildFacetPathData(f: Facet): string | null {
+    if (f == null || f.borderSegments.length === 0) {
+        return null;
+    }
+    const newpath: Point[] = f.getFullPathFromBorderSegments(false);
+    if (newpath.length === 0) {
+        return null;
+    }
+    if (newpath[0].x !== newpath[newpath.length - 1].x || newpath[0].y !== newpath[newpath.length - 1].y) {
+        newpath.push(newpath[0]);
+    } // close loop if necessary
+
+    let data = "M ";
+    data += newpath[0].x + " " + newpath[0].y + " ";
+    for (let i: number = 1; i < newpath.length; i++) {
+        const midpointX = (newpath[i].x + newpath[i - 1].x) / 2;
+        const midpointY = (newpath[i].y + newpath[i - 1].y) / 2;
+        data += "Q " + midpointX + " " + midpointY + " " + newpath[i].x + " " + newpath[i].y + " ";
+    }
+    data += "Z";
+    return data;
+}
+
+/**
+ * Builds the `<g class="label">` element with the facet's color number, rendered
+ * at a uniform target size (capped to fontSize; smaller facets shrink to fit).
+ */
+export function buildFacetLabel(f: Facet, fontSize: number, fontColor: string): SVGGElement {
+    const txt = document.createElementNS(SVG_XMLNS, "text");
+    txt.setAttribute("font-family", "Tahoma");
+    const nrOfDigits = (f.color + 1 + "").length;
+    // Glyph size is fixed within the 100x100 viewBox (only compensating for
+    // multi-digit width). The final physical size is dictated solely by the
+    // capped box below, so all numbers render at a uniform size.
+    txt.setAttribute("font-size", (90 / nrOfDigits) + "");
+    txt.setAttribute("dominant-baseline", "middle");
+    txt.setAttribute("text-anchor", "middle");
+    txt.setAttribute("fill", fontColor);
+
+    txt.textContent = f.color + 1 + "";
+
+    // Cap the label box to a uniform target size (fontSize). Facets with enough
+    // room render at the uniform size; smaller facets shrink so the number fits.
+    const boxW = Math.min(f.labelBounds.width, fontSize);
+    const boxH = Math.min(f.labelBounds.height, fontSize);
+    const centerX = f.labelBounds.minX + f.labelBounds.width / 2;
+    const centerY = f.labelBounds.minY + f.labelBounds.height / 2;
+
+    const subsvg = document.createElementNS(SVG_XMLNS, "svg");
+    subsvg.setAttribute("width", boxW + "");
+    subsvg.setAttribute("height", boxH + "");
+    subsvg.setAttribute("overflow", "visible");
+    subsvg.setAttribute("viewBox", "-50 -50 100 100");
+    subsvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+
+    subsvg.appendChild(txt);
+
+    const g = document.createElementNS(SVG_XMLNS, "g");
+    g.setAttribute("class", "label");
+    // Re-center the capped box within the facet's available room.
+    g.setAttribute("transform", "translate(" + (centerX - boxW / 2) + "," + (centerY - boxH / 2) + ")");
+    g.appendChild(subsvg);
+    return g;
+}
 
 export class ProcessResult {
     public facetResult!: FacetResult;
@@ -409,29 +481,8 @@ export class GUIProcessManager {
         let count = 0;
         for (const f of facetResult.facets) {
 
-            if (f != null && f.borderSegments.length > 0) {
-                let newpath: Point[] = [];
-                const useSegments = true;
-                if (useSegments) {
-                    newpath = f.getFullPathFromBorderSegments(false);
-                } else {
-                    for (let i: number = 0; i < f.borderPath.length; i++) {
-                        newpath.push(new Point(f.borderPath[i].getWallX() + 0.5, f.borderPath[i].getWallY() + 0.5));
-                    }
-                }
-                if (newpath[0].x !== newpath[newpath.length - 1].x || newpath[0].y !== newpath[newpath.length - 1].y) {
-                    newpath.push(newpath[0]);
-                } // close loop if necessary
-
-                // Build path data (shared by fill and stroke paths)
-                let data = "M ";
-                data += newpath[0].x + " " + newpath[0].y + " ";
-                for (let i: number = 1; i < newpath.length; i++) {
-                    const midpointX = (newpath[i].x + newpath[i - 1].x) / 2;
-                    const midpointY = (newpath[i].y + newpath[i - 1].y) / 2;
-                    data += "Q " + midpointX + " " + midpointY + " " + newpath[i].x + " " + newpath[i].y + " ";
-                }
-                data += "Z";
+            const data = f != null ? buildFacetPathData(f) : null;
+            if (f != null && data != null) {
 
                 // Fill path — color fill only, no stroke. Goes in fillGroup which has opacity applied.
                 const fillPath = document.createElementNS(xmlns, "path");
@@ -464,41 +515,7 @@ export class GUIProcessManager {
                 // add the color labels if necessary. I mean, this is the whole idea behind the paint by numbers part
                 // so I don't know why you would hide them
                 if (addColorLabels) {
-                    const txt = document.createElementNS(xmlns, "text");
-                    txt.setAttribute("font-family", "Tahoma");
-                    const nrOfDigits = (f.color + 1 + "").length;
-                    // Glyph size is fixed within the 100x100 viewBox (only compensating for
-                    // multi-digit width). The final physical size is dictated solely by the
-                    // capped box below, so all numbers render at a uniform size.
-                    txt.setAttribute("font-size", (90 / nrOfDigits) + "");
-                    txt.setAttribute("dominant-baseline", "middle");
-                    txt.setAttribute("text-anchor", "middle");
-                    txt.setAttribute("fill", fontColor);
-
-                    txt.textContent = f.color + 1 + "";
-
-                    // Cap the label box to a uniform target size (fontSize). Facets with enough
-                    // room render at the uniform size; smaller facets shrink so the number fits.
-                    const boxW = Math.min(f.labelBounds.width, fontSize);
-                    const boxH = Math.min(f.labelBounds.height, fontSize);
-                    const centerX = f.labelBounds.minX + f.labelBounds.width / 2;
-                    const centerY = f.labelBounds.minY + f.labelBounds.height / 2;
-
-                    const subsvg = document.createElementNS(xmlns, "svg");
-                    subsvg.setAttribute("width", boxW + "");
-                    subsvg.setAttribute("height", boxH + "");
-                    subsvg.setAttribute("overflow", "visible");
-                    subsvg.setAttribute("viewBox", "-50 -50 100 100");
-                    subsvg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-
-                    subsvg.appendChild(txt);
-
-                    const g = document.createElementNS(xmlns, "g");
-                    g.setAttribute("class", "label");
-                    // Re-center the capped box within the facet's available room.
-                    g.setAttribute("transform", "translate(" + (centerX - boxW / 2) + "," + (centerY - boxH / 2) + ")");
-                    g.appendChild(subsvg);
-                    svg.appendChild(g);
+                    svg.appendChild(buildFacetLabel(f, fontSize, fontColor));
                 }
 
                 if (await yielder()) {
