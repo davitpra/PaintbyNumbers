@@ -186,9 +186,11 @@ export default function PalettePicker({
         <EyedropperModal
           imageSrc={imageSrc}
           suggested={suggested}
+          pickedColors={opts.pickedColors}
           isPicked={isPicked}
           onPick={opts.addPickedColor}
           onToggleSuggested={opts.togglePickedColor}
+          onRemove={opts.removePickedColor}
           onClose={() => setPickerOpen(false)}
         />
       )}
@@ -199,16 +201,20 @@ export default function PalettePicker({
 function EyedropperModal({
   imageSrc,
   suggested,
+  pickedColors,
   isPicked,
   onPick,
   onToggleSuggested,
+  onRemove,
   onClose,
 }: {
   imageSrc: string;
   suggested: RGB[];
+  pickedColors: RGB[];
   isPicked: (c: RGB) => boolean;
   onPick: (c: RGB) => void;
   onToggleSuggested: (c: RGB) => void;
+  onRemove: (c: RGB) => void;
   onClose: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -245,7 +251,12 @@ function EyedropperModal({
     const rect = canvas.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
     const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
-    return { x, y, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
+    return {
+      x,
+      y,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+    };
   };
 
   const onMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -282,7 +293,12 @@ function EyedropperModal({
         lctx.lineWidth = 1;
         lctx.strokeRect(px - cell / 2, px - cell / 2, cell, cell);
         lctx.strokeStyle = "rgba(255,255,255,0.9)";
-        lctx.strokeRect(px - cell / 2 - 1, px - cell / 2 - 1, cell + 2, cell + 2);
+        lctx.strokeRect(
+          px - cell / 2 - 1,
+          px - cell / 2 - 1,
+          cell + 2,
+          cell + 2,
+        );
       }
     }
   };
@@ -361,16 +377,18 @@ function EyedropperModal({
                 : "Hover over the photo"}
             </span>
           </div>
-          {suggested.length > 0 && (
-            <div className={styles.paletteRow}>
-              {suggested.map((c) => (
-                <Swatch
-                  key={rgbKey(c)}
-                  color={c}
-                  active={isPicked(c)}
-                  onClick={() => onToggleSuggested(c)}
-                />
-              ))}
+          {pickedColors.length > 0 && (
+            <div className={styles.field}>
+              <span className={styles.fieldLabel}>Your colors</span>
+              <div className={styles.paletteRow}>
+                {pickedColors.map((c) => (
+                  <Swatch
+                    key={rgbKey(c)}
+                    color={c}
+                    onRemove={() => onRemove(c)}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
