@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RGB } from "@/lib/pbn/common";
 import { getPaperAspect } from "@/lib/pbn/svgExport";
+import { buildHighlightMaskDataUrl } from "@/lib/pbn/highlight";
 import CropModal from "./CropModal";
 import ImageCompareSlider from "./ImageCompareSlider";
 import { PAPER_LABELS } from "./pbn/constants";
@@ -16,6 +17,7 @@ import { useExport } from "./pbn/useExport";
 import InputOptionsPane from "./pbn/InputOptionsPane";
 import ProgressBar from "./pbn/ProgressBar";
 import RenderOptionsPane from "./pbn/RenderOptionsPane";
+import ColorPalettePane from "./pbn/ColorPalettePane";
 import MixingGuide from "./pbn/MixingGuide";
 import ExportControls from "./pbn/ExportControls";
 import styles from "./PaintByNumbers.module.css";
@@ -28,6 +30,8 @@ export default function PaintByNumbers() {
   const mixing = usePaintMixing();
   const guideRef = useRef<HTMLDivElement>(null);
   const [showGuide, setShowGuide] = useState(false);
+  // color index spotlighted in the preview, or null when none is selected
+  const [selectedColor, setSelectedColor] = useState<number | null>(null);
 
   // Close the mixing-guide modal with Escape.
   useEffect(() => {
@@ -40,7 +44,11 @@ export default function PaintByNumbers() {
   }, [showGuide]);
 
   const { setRecipes, computeRecipes } = mixing;
-  const onProcessStart = useCallback(() => setRecipes(null), [setRecipes]);
+  const onProcessStart = useCallback(() => {
+    setRecipes(null);
+    // drop any spotlight tied to the palette we're about to replace
+    setSelectedColor(null);
+  }, [setRecipes]);
   const onComplete = useCallback(
     (colors: RGB[]) => void computeRecipes(colors),
     [computeRecipes],
@@ -56,6 +64,19 @@ export default function PaintByNumbers() {
     onProcessStart,
     onComplete,
   });
+
+  // Rebuild the dimming mask whenever the spotlighted color changes. Keyed on
+  // palette too so it recomputes against the fresh facet result after a reprocess.
+  const highlightSrc = useMemo(() => {
+    const result = processing.processResultRef.current;
+    if (selectedColor === null || !result) return undefined;
+    return buildHighlightMaskDataUrl(
+      result.facetResult,
+      selectedColor,
+      result.colorsByIndex,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedColor, processing.palette]);
 
   const exp = useExport({
     svgContainerRef: processing.svgContainerRef,
@@ -178,18 +199,25 @@ export default function PaintByNumbers() {
                 processedSrc={processing.compareImgs.processed}
                 leftLabel="Original"
                 rightLabel="Result"
+                highlightSrc={highlightSrc}
               />
             )}
           </div>
 
           {processing.compareImgs && !processing.isProcessing && (
-            <RenderOptionsPane
-              opts={renderOptions}
-              palette={processing.palette}
-              recipes={mixing.recipes}
-              showGuide={showGuide}
-              onToggleGuide={() => setShowGuide((v) => !v)}
-            />
+            <>
+              <RenderOptionsPane opts={renderOptions} />
+              <ColorPalettePane
+                palette={processing.palette}
+                recipes={mixing.recipes}
+                showGuide={showGuide}
+                onToggleGuide={() => setShowGuide((v) => !v)}
+                selectedColor={selectedColor}
+                onSelectColor={(i) =>
+                  setSelectedColor((prev) => (prev === i ? null : i))
+                }
+              />
+            </>
           )}
 
           {/* keep the SVG container mounted (the pipeline writes into it) but

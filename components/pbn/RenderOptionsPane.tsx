@@ -1,14 +1,8 @@
-import { RGB } from "@/lib/pbn/common";
-import type { MixRecipe } from "@/lib/pbn/paintMixing";
 import { RenderOptions } from "./useRenderOptions";
 import styles from "../PaintByNumbers.module.css";
 
 interface RenderOptionsPaneProps {
   opts: RenderOptions;
-  palette: RGB[];
-  recipes: MixRecipe[] | null;
-  showGuide: boolean;
-  onToggleGuide: () => void;
 }
 
 /** Native <input type="color"> only accepts #rrggbb, so expand shorthand
@@ -22,13 +16,7 @@ function toColorInputValue(value: string): string {
   return "#000000";
 }
 
-export default function RenderOptionsPane({
-  opts,
-  palette,
-  recipes,
-  showGuide,
-  onToggleGuide,
-}: RenderOptionsPaneProps) {
+export default function RenderOptionsPane({ opts }: RenderOptionsPaneProps) {
   const toggles: {
     label: string;
     checked: boolean;
@@ -142,40 +130,6 @@ export default function RenderOptionsPane({
           />
         </label>
       </div>
-
-      <div className={styles.paletteBlock}>
-        <div className={styles.paletteHead}>
-          <strong>Color palette</strong>
-          <span className={styles.paletteCount}>{palette.length} colors</span>
-        </div>
-        <div className={styles.palette}>
-          {palette.map((c, i) => (
-            <div
-              key={i}
-              className={styles.color}
-              style={{ backgroundColor: `rgb(${c[0]},${c[1]},${c[2]})` }}
-              title={`#${i} · rgb(${c[0]}, ${c[1]}, ${c[2]})`}
-            >
-              {i + 1}
-            </div>
-          ))}
-        </div>
-      </div>
-      {recipes && palette.length > 0 && (
-        <div>
-          <button
-            type="button"
-            className={styles.guideToggle}
-            onClick={onToggleGuide}
-            aria-expanded={showGuide}
-          >
-            <span className={styles.guideToggleChevron}>
-              {showGuide ? "▾" : "▸"}
-            </span>
-            See mixing guide ({recipes.length} colors)
-          </button>
-        </div>
-      )}
     </section>
   );
 }

@@ -28,6 +28,20 @@
   -webkit-user-drag: none;
 }
 
+/* Dimming mask spotlighting the selected color's sections. Sits between the
+   processed base image and the original overlay, so the reference side of the
+   slider is never dimmed. */
+.highlightImg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
 /* Transparent layer above both images. Keeps pointer-events: auto so it
    intercepts right-click / touch long-press; the pointerdown still bubbles to
    .wrapper, so dragging the divider keeps working. */

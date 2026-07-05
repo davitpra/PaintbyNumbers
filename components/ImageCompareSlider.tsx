@@ -10,6 +10,8 @@ interface ImageCompareSliderProps {
   processedSrc: string;
   leftLabel?: string;
   rightLabel?: string;
+  /** Optional dimming mask overlaid on both images (e.g. to spotlight one color). */
+  highlightSrc?: string;
 }
 
 export default function ImageCompareSlider({
@@ -17,6 +19,7 @@ export default function ImageCompareSlider({
   processedSrc,
   leftLabel,
   rightLabel,
+  highlightSrc,
 }: ImageCompareSliderProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState(50);
@@ -65,6 +68,17 @@ export default function ImageCompareSlider({
         alt=""
         draggable={false}
       />
+      {/* highlight mask: dims everything except the sections of the selected
+          color. Rendered below the original overlay so the reference image
+          stays untouched — the spotlight only shows on the processed side. */}
+      {highlightSrc && (
+        <img
+          className={styles.highlightImg}
+          src={highlightSrc}
+          alt=""
+          draggable={false}
+        />
+      )}
       {/* overlay = original, clipped to the left of the divider */}
       <img
         className={styles.overlayImg}
