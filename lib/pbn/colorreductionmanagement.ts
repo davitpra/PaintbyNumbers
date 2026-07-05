@@ -120,28 +120,45 @@ export class ColorReducer {
             vectors[vIdx++] = vec;
         }
 
-        // build pinned centroids for the colors that should appear in the palette
-        // (e.g. black/white), but only for those actually present in the image,
-        // converted into the active clustering color space
+        // build pinned centroids for the colors that should appear in the palette,
+        // converted into the active clustering color space:
+        //  - kMeansPinnedColors: user-chosen colors, added unconditionally
+        //  - kMeansFixedColors: automatic candidates (e.g. black/white), added
+        //    only when actually present in the image
+        // User colors take priority and later duplicates are skipped so the same
+        // color is never pinned twice.
         const totalPixels = imgData.width * imgData.height;
         const fixedCentroids: Vector[] = [];
+        const seenPinned = new Set<string>();
+
+        const toColorSpace = (rgb: RGB): number[] => {
+            if (settings.kMeansClusteringColorSpace === ClusteringColorSpace.HSL) {
+                return rgbToHsl(rgb[0], rgb[1], rgb[2]);
+            } else if (settings.kMeansClusteringColorSpace === ClusteringColorSpace.LAB) {
+                return rgb2lab(rgb);
+            }
+            return rgb;
+        };
+
+        const addPinnedColor = (rgb: RGB) => {
+            const key = `${rgb[0]},${rgb[1]},${rgb[2]}`;
+            if (seenPinned.has(key)) {
+                return;
+            }
+            seenPinned.add(key);
+            const vec = new Vector(toColorSpace(rgb));
+            vec.tag = rgb;
+            fixedCentroids.push(vec);
+        };
+
+        for (const rgb of settings.kMeansPinnedColors) {
+            addPinnedColor(rgb);
+        }
         for (const rgb of settings.kMeansFixedColors) {
             if (!ColorReducer.isColorPresent(rgb, pointsByColor, totalPixels)) {
                 continue;
             }
-            let data: number[];
-            if (settings.kMeansClusteringColorSpace === ClusteringColorSpace.RGB) {
-                data = rgb;
-            } else if (settings.kMeansClusteringColorSpace === ClusteringColorSpace.HSL) {
-                data = rgbToHsl(rgb[0], rgb[1], rgb[2]);
-            } else if (settings.kMeansClusteringColorSpace === ClusteringColorSpace.LAB) {
-                data = rgb2lab(rgb);
-            } else {
-                data = rgb;
-            }
-            const vec = new Vector(data);
-            vec.tag = rgb;
-            fixedCentroids.push(vec);
+            addPinnedColor(rgb);
         }
 
         const random = new Random(settings.randomSeed === 0 ? new Date().getTime() : settings.randomSeed);

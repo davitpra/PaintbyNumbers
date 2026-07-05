@@ -1403,3 +1403,167 @@ la .cropBox {
 .modalActions .btnCancel {
   margin: 0;
 }
+
+/* ---- Palette picker ---- */
+.paletteRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.paletteSwatchWrap {
+  position: relative;
+  display: inline-flex;
+  line-height: 0;
+}
+
+.paletteSwatch,
+.paletteSwatchActive {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  padding: 0;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
+}
+
+.paletteSwatch:hover,
+.paletteSwatchActive:hover {
+  transform: scale(1.08);
+}
+
+.paletteSwatchActive {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.paletteSwatchCheck {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+}
+
+.paletteSwatchRemove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: none;
+  background: var(--text);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.paletteSwatchRemove:hover {
+  background: #d32f2f;
+}
+
+.paletteClear {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 6px;
+  text-decoration: underline;
+}
+
+.paletteClear:hover {
+  color: var(--text);
+}
+
+/* ---- Eyedropper modal ---- */
+.eyedropperModal {
+  width: 100%;
+  max-width: min(900px, 95vw);
+}
+
+.eyedropperStage {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eyedropperCanvasWrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+.eyedropperCanvas {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+  width: auto;
+  height: auto;
+  cursor: crosshair;
+  border-radius: 6px;
+}
+
+.loupe {
+  position: absolute;
+  transform: translate(-50%, -140%);
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.loupeCanvas {
+  display: block;
+  image-rendering: pixelated;
+}
+
+.eyedropperFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.eyedropperCurrent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.eyedropperCurrentSwatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.eyedropperCurrentLabel {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

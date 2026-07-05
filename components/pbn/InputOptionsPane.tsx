@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ClusteringColorSpace } from "@/lib/pbn/settings";
 import { PRESETS } from "./constants";
 import { InputOptions } from "./useInputOptions";
+import PalettePicker from "./PalettePicker";
 import styles from "../PaintByNumbers.module.css";
 
 const COLOR_SPACES: { value: ClusteringColorSpace; label: string }[] = [
@@ -22,8 +23,19 @@ function HelpTip({ text }: { text: string }) {
   );
 }
 
-export default function InputOptionsPane({ opts }: { opts: InputOptions }) {
+export default function InputOptionsPane({
+  opts,
+  imageSrc,
+}: {
+  opts: InputOptions;
+  imageSrc: string | null;
+}) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // In "exact" mode the palette size is fixed by the chosen colors, so the
+  // manual "Number of colors" field no longer applies.
+  const colorCountLocked =
+    opts.pickedColors.length > 0 && opts.paletteMode === "exact";
 
   return (
     <div className={styles.inputPane}>
@@ -104,16 +116,29 @@ export default function InputOptionsPane({ opts }: { opts: InputOptions }) {
               }
             />
           </label>
-          <label className={styles.field}>
+          <label
+            className={styles.field}
+            aria-disabled={colorCountLocked}
+            style={{ opacity: colorCountLocked ? 0.5 : 1 }}
+          >
             <span className={styles.fieldLabel}>
               Number of colors
-              <HelpTip text="How many distinct colors the final palette will contain." />
+              <HelpTip
+                text={
+                  colorCountLocked
+                    ? "Set by your chosen palette while “Only my colors” is active."
+                    : "How many distinct colors the final palette will contain."
+                }
+              />
             </span>
             <input
               type="number"
               className={styles.fieldInput}
               min={1}
-              value={opts.nrOfClusters}
+              disabled={colorCountLocked}
+              value={
+                colorCountLocked ? opts.pickedColors.length : opts.nrOfClusters
+              }
               onChange={(e) =>
                 opts.setNrOfClusters(parseInt(e.target.value) || 1)
               }
@@ -136,6 +161,9 @@ export default function InputOptionsPane({ opts }: { opts: InputOptions }) {
           </label>
         </div>
       </div>
+
+      {/* Palette: choose which colors the PBN uses */}
+      <PalettePicker opts={opts} imageSrc={imageSrc} />
 
       {/* Advanced settings */}
       <div className={styles.optGroup}>

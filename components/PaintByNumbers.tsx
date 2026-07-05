@@ -136,7 +136,7 @@ export default function PaintByNumbers() {
               <span className={styles.stepNum}>2</span>
               Image settings
             </h3>
-            <InputOptionsPane opts={inputOptions} />
+            <InputOptionsPane opts={inputOptions} imageSrc={input.imageSrc} />
           </section>
         </aside>
 

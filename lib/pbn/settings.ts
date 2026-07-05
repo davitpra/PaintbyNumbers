@@ -17,7 +17,13 @@ export class Settings {
     // Unlike kMeansColorRestrictions (which snaps every centroid to the nearest
     // allowed color), these are added as extra pinned clusters: pixels close to
     // them collapse to the exact color while the rest are clustered normally.
+    // These are only added when the image actually contains them (presence check).
     public kMeansFixedColors: RGB[] = [];
+
+    // User-chosen palette colors (e.g. eyedropped from the photo). Like
+    // kMeansFixedColors these are added as pinned clusters, but unconditionally:
+    // no presence check, because the user explicitly asked for them.
+    public kMeansPinnedColors: RGB[] = [];
 
     public colorAliases: { [key: string]: RGB } = {};
 
